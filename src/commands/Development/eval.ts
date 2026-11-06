@@ -25,7 +25,7 @@ export class EvalCommand extends Command {
 
 	private async eval(interaction: Command.ChatInputCommandInteraction, code: string, flags: { depth: number; showHidden: boolean }) {
 		let success = true;
-		let result = null;
+		let result;
 
 		try {
 			result = await eval(code);
