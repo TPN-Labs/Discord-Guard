@@ -17,10 +17,15 @@ git clone https://github.com/lorencerri/discord-bot-template.git # Clone the rep
 cd discord-bot-template # Enter the directory
 copy .env.example ./src/.env # Copy the .env.example file into the src folder and rename it .env
 nano .env # Fill in the .env file
-npm install # Install dependencies
-npm run build # Build the bot
-npm run start # Start the bot
+corepack enable # Use the Yarn version pinned in package.json
+yarn install # Install dependencies
+yarn build # Build the bot
+yarn start # Start the bot
 ```
+
+### Checks
+
+`yarn lint` (ESLint), `yarn check-types` (TypeScript) and `yarn build` run in CI on every pull request to `main`, through the shared workflows in [`TPN-Labs/GitHub-Actions`](https://github.com/TPN-Labs/GitHub-Actions). PR titles must follow `<type>: <summary>` or `<type>(<scope>): <summary>`, with `<type>` one of `fix`, `feat`, `ci`, `docs`, `chore`, `test`.
 
 ### Default Commands
 

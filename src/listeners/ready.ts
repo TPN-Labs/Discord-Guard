@@ -1,4 +1,4 @@
-import type { ListenerOptions, PieceContext } from '@sapphire/framework';
+import type { ListenerOptions, Piece, PieceContext } from '@sapphire/framework';
 import { Listener, Store } from '@sapphire/framework';
 import { blue, gray, green, magenta, magentaBright, white, yellow } from 'colorette';
 
@@ -50,7 +50,7 @@ ${line03}${dev ? ` ${pad}${blc('<')}${llc('/')}${blc('>')} ${llc('DEVELOPMENT MO
 		logger.info(this.styleStore(last, true));
 	}
 
-	private styleStore(store: Store<any>, last: boolean) {
+	private styleStore(store: Store<Piece>, last: boolean) {
 		return gray(`${last ? '└─' : '├─'} Loaded ${this.style(store.size.toString().padEnd(3, ' '))} ${store.name}.`);
 	}
 }

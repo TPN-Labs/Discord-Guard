@@ -13,7 +13,7 @@ import { Message, MessageEmbed } from 'discord.js';
 	description: 'Ping bot to see if it is alive.',
 })
 export class PingCommand extends Command {
-	async ping(interaction: Command.ChatInputInteraction | Command.ContextMenuInteraction): Promise<any> {
+	async ping(interaction: Command.ChatInputInteraction | Command.ContextMenuInteraction): Promise<unknown> {
 
 		const embed = new MessageEmbed()
 			.setTitle("Ping?")
