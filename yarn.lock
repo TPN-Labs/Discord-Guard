@@ -1028,7 +1028,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cross-spawn@npm:^7.0.3, cross-spawn@npm:^7.0.6":
+"cross-spawn@npm:^7.0.6":
   version: 7.0.6
   resolution: "cross-spawn@npm:7.0.6"
   dependencies:
@@ -1168,7 +1168,7 @@ __metadata:
     npm-run-all: "npm:^4.1.5"
     prettier: "npm:^3.9.10"
     reflect-metadata: "npm:^0.2.2"
-    tsc-watch: "npm:^5.0.3"
+    tsc-watch: "npm:^7.2.1"
     tslib: "npm:^2"
     typescript: "npm:^5"
     typescript-eslint: "npm:^8"
@@ -3178,10 +3178,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"string-argv@npm:^0.1.1":
-  version: 0.1.2
-  resolution: "string-argv@npm:0.1.2"
-  checksum: 10c0/7674d8d6c09cc89fdcf6d814227934138c114b75c3349d01fd21748dacb1ca8456982e6872475f4523b90848d2988b044494167e51284fe11c234b13c4c83989
+"string-argv@npm:^0.3.2":
+  version: 0.3.2
+  resolution: "string-argv@npm:0.3.2"
+  checksum: 10c0/75c02a83759ad1722e040b86823909d9a2fc75d15dd71ec4b537c3560746e33b5f5a07f7332d1e3f88319909f82190843aa2f0a0d8c8d591ec08e93d5b8dec82
   languageName: node
   linkType: hard
 
@@ -3256,7 +3256,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"strip-ansi@npm:^6.0.0, strip-ansi@npm:^6.0.1":
+"strip-ansi@npm:^6.0.1":
   version: 6.0.1
   resolution: "strip-ansi@npm:6.0.1"
   dependencies:
@@ -3389,20 +3389,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tsc-watch@npm:^5.0.3":
-  version: 5.0.3
-  resolution: "tsc-watch@npm:5.0.3"
+"tsc-watch@npm:^7.2.1":
+  version: 7.2.1
+  resolution: "tsc-watch@npm:7.2.1"
   dependencies:
-    cross-spawn: "npm:^7.0.3"
+    cross-spawn: "npm:^7.0.6"
     node-cleanup: "npm:^2.1.2"
     ps-tree: "npm:^1.2.0"
-    string-argv: "npm:^0.1.1"
-    strip-ansi: "npm:^6.0.0"
+    string-argv: "npm:^0.3.2"
   peerDependencies:
     typescript: "*"
   bin:
-    tsc-watch: index.js
-  checksum: 10c0/5466564b2e24c06b9c6a98ac136534730652b45e391e93f6f9e91ae31215e14f4fd19244d2472d3a07f2b2e47082516599254808d8f00c0b9ac45800c9b2438f
+    tsc-watch: dist/lib/tsc-watch.js
+  checksum: 10c0/cac0c9f9be39ed429f2d7665f772a83d30c47437a0d9bcc01a250125a18b5e0c64a3bc36fb014051388227faa84ffc6c4769cd04356a2fd1304c0ef59e99f377
   languageName: node
   linkType: hard
 
