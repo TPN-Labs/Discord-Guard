@@ -81,7 +81,7 @@ Slash commands for moderators and members. See [Commands](#commands).
 ## Requirements
 
 -   [Node.js](https://nodejs.org) **18 LTS or newer** (discord.js v13 needs at least 16.9)
--   Yarn 4, via [Corepack](https://nodejs.org/api/corepack.html) (`corepack enable`; the version is pinned in `package.json`)
+-   Yarn 4, through [Corepack](https://nodejs.org/api/corepack.html) (ships with Node.js; see [Running locally](#running-locally))
 -   A Discord application with a bot user (see below)
 -   Permission to manage the target Discord server
 
@@ -128,13 +128,13 @@ Copy the example environment file **into `src/`**. The bot reads `src/.env`, not
 cp .env.example src/.env
 ```
 
-Fill in `src/.env` (see [Configuration](#configuration)), then enable Corepack so `yarn` resolves to the version pinned in `package.json`:
+Fill in `src/.env` (see [Configuration](#configuration)). This project uses [Yarn](https://yarnpkg.com/), pinned through the `packageManager` field in `package.json`. Turn on Corepack once so the right Yarn version is used:
 
 ```bash
 corepack enable
 ```
 
-Install the dependencies from the lockfile:
+Install the dependencies:
 
 ```bash
 yarn install
@@ -250,10 +250,12 @@ Every pull request to `main` runs these checks through the shared workflows in [
 | `ci / Build & Verify`       | `yarn build`, then checks that `dist/` was produced                                                                           |
 | `title / Validate PR title` | Title must be `<type>: <summary>` or `<type>(<scope>): <summary>`; `<type>` is `fix`, `feat`, `ci`, `docs`, `chore` or `test` |
 
+Dependabot (`.github/dependabot.yml`) opens weekly pull requests for dependency updates through Yarn.
+
 Tips:
 
 -   Use a separate test server and a separate bot application for development, so experiments never kick real members.
--   The [Sapphire CLI](https://www.sapphirejs.dev/docs/Guide/CLI/introduction) (`npx @sapphire/cli generate command <name>`) reads `.sapphirerc.json` and scaffolds new pieces in the right folder.
+-   The [Sapphire CLI](https://www.sapphirejs.dev/docs/Guide/CLI/introduction) (`yarn dlx @sapphire/cli generate command <name>`) reads `.sapphirerc.json` and scaffolds new pieces in the right folder.
 
 ---
 
