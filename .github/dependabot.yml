@@ -3,27 +3,27 @@ version: 2
 updates:
   # Bot dependencies (Yarn). Dependabot keys the "npm" ecosystem off
   # yarn.lock, so updates are resolved and committed with Yarn.
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: 'npm'
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     open-pull-requests-limit: 10
     labels:
-      - "dependencies"
+      - 'dependencies'
     versioning-strategy: increase
     commit-message:
-      prefix: "chore"
-      include: "scope"
+      prefix: 'chore'
+      include: 'scope'
     groups:
       sapphire:
         patterns:
-          - "@sapphire/*"
+          - '@sapphire/*'
       discordjs:
         patterns:
-          - "discord.js"
-          - "@discordjs/*"
+          - 'discord.js'
+          - '@discordjs/*'
       dev-dependencies:
-        dependency-type: "development"
+        dependency-type: 'development'
         update-types:
-          - "minor"
-          - "patch"
+          - 'minor'
+          - 'patch'
