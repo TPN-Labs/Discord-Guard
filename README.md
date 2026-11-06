@@ -81,7 +81,7 @@ Slash commands for moderators and members. See [Commands](#commands).
 ## Requirements
 
 -   [Node.js](https://nodejs.org) **18 LTS or newer** (discord.js v13 needs at least 16.9)
--   npm
+-   Yarn 4, through [Corepack](https://nodejs.org/api/corepack.html) (ships with Node.js; see [Running locally](#running-locally))
 -   A Discord application with a bot user (see below)
 -   Permission to manage the target Discord server
 
@@ -128,29 +128,39 @@ Copy the example environment file **into `src/`**. The bot reads `src/.env`, not
 cp .env.example src/.env
 ```
 
-Fill in `src/.env` (see [Configuration](#configuration)), then install the dependencies:
+Fill in `src/.env` (see [Configuration](#configuration)). This project uses [Yarn](https://yarnpkg.com/), pinned through the `packageManager` field in `package.json`. Turn on Corepack once so the right Yarn version is used:
 
 ```bash
-npm install
+corepack enable
 ```
 
-Install the two package versions the build currently needs (see [Troubleshooting](#build-fails-with-hundreds-of-errors-in-node_modulessapphireresult) for why):
+Install the dependencies:
 
 ```bash
-npm install --no-save typescript@5.4 discord-api-types@0.36.3
+yarn install
 ```
 
-Build and start:
+Install the two package versions the build currently needs (see [Troubleshooting](#build-fails-with-hundreds-of-errors-in-node_modulessapphireresult) for why). Yarn has no `--no-save`, so add them, then put `package.json` and `yarn.lock` back so the workaround is not committed:
 
 ```bash
-npm run build -- --ignoreDeprecations 5.0
+yarn add -D typescript@5.4 discord-api-types@0.36.3
 ```
 
 ```bash
-npm start
+git restore package.json yarn.lock
 ```
 
-`--no-save` installs are dropped by the next plain `npm install`, so run the second command again after every `npm install`.
+Build and start. Call the TypeScript 5.4 compiler from `node_modules/.bin` directly: `yarn build` still resolves the TypeScript 4.9 recorded in `yarn.lock`.
+
+```bash
+node_modules/.bin/tsc --ignoreDeprecations 5.0
+```
+
+```bash
+yarn start
+```
+
+The next `yarn install` removes the two workaround packages, so run the `yarn add` and `git restore` commands again after every `yarn install`. Don't use `npm install`: dependency changes go through Yarn and are committed in `yarn.lock`.
 
 Slash commands are registered with Discord when the bot starts. Global commands can take a few minutes to show up in the client the first time.
 
@@ -160,7 +170,7 @@ Slash commands are registered with Discord when the bot starts. Global commands 
 
 ### Build fails with hundreds of errors in `node_modules/@sapphire/result`
 
-Running a plain `npm run build` after a fresh `npm install` fails with errors like:
+Running a plain `yarn build` after `yarn install` fails with errors like:
 
 ```
 node_modules/@sapphire/result/dist/cjs/index.d.cts:1879:89 - error TS1128: Declaration or statement expected.
@@ -168,22 +178,26 @@ node_modules/@sapphire/result/dist/cjs/index.d.cts:1879:89 - error TS1128: Decla
 Found 210 errors in the same file, starting at: node_modules/@sapphire/result/dist/cjs/index.d.cts:17
 ```
 
-**Why:** the repository has no lockfile, so npm installs the newest versions that match `package.json`. `@sapphire/framework` now pulls in `@sapphire/result` 2.8, whose type definitions use TypeScript 5 syntax, while `package.json` pins TypeScript 4.x. Older `@sapphire/result` versions don't help: `@sapphire/lexure` requires `^2.8.0`.
+**Why:** `@sapphire/framework` pulls in `@sapphire/result` 2.8, whose type definitions use TypeScript 5 syntax, while `package.json` pins TypeScript 4.x. `yarn.lock` records both versions, so every install reproduces the error. Older `@sapphire/result` versions don't help: `@sapphire/lexure` requires `^2.8.0`.
 
 **Fix:** build with TypeScript 5.4, as shown in [Running locally](#running-locally):
 
 ```bash
-npm install --no-save typescript@5.4 discord-api-types@0.36.3
+yarn add -D typescript@5.4 discord-api-types@0.36.3
 ```
 
 ```bash
-npm run build -- --ignoreDeprecations 5.0
+git restore package.json yarn.lock
+```
+
+```bash
+node_modules/.bin/tsc --ignoreDeprecations 5.0
 ```
 
 -   `--ignoreDeprecations 5.0` is needed because the shared `@sapphire/ts-config` still sets an option TypeScript 5 deprecates. TypeScript 5.5 and newer reject it outright, so stay on 5.4.
 -   `discord-api-types@0.36.3` fixes a follow-up error in `src/commands/General/ping.ts` (`Argument of type 'ApplicationCommandType.Message' is not assignable to parameter of type 'ContextMenuCommandType'`). `@discordjs/builders` 1.x hoists a newer `discord-api-types` than the one Sapphire and discord.js v13 use, and the two types no longer match.
 
-`npm run watch` and `npm run watch:start` don't pass `--ignoreDeprecations`, so they hit the same error until this is fixed in `package.json` and `tsconfig.json`.
+-   `yarn build`, `yarn watch` and `yarn watch:start` use the TypeScript 4.9 from `yarn.lock` and don't pass `--ignoreDeprecations`, so they hit the same error until this is fixed in `package.json` and `tsconfig.json`.
 
 ### `[TOKEN_INVALID]: An invalid token was provided.`
 
@@ -257,21 +271,23 @@ New features are expected to land as:
 
 ## Development
 
-| Script                | What it does                                    |
-| --------------------- | ----------------------------------------------- |
-| `npm run build`       | Compiles TypeScript from `src/` into `dist/`    |
-| `npm start`           | Runs the compiled bot from `dist/`              |
-| `npm run dev`         | Builds, then starts                             |
-| `npm run watch`       | Recompiles on every change                      |
-| `npm run watch:start` | Recompiles and restarts the bot on every change |
-| `npm run format`      | Formats `src/` with Prettier                    |
+| Script             | What it does                                    |
+| ------------------ | ----------------------------------------------- |
+| `yarn build`       | Compiles TypeScript from `src/` into `dist/`    |
+| `yarn start`       | Runs the compiled bot from `dist/`              |
+| `yarn dev`         | Builds, then starts                             |
+| `yarn watch`       | Recompiles on every change                      |
+| `yarn watch:start` | Recompiles and restarts the bot on every change |
+| `yarn format`      | Formats `src/` with Prettier                    |
 
-Until the [build issue](#build-fails-with-hundreds-of-errors-in-node_modulessapphireresult) is fixed, only `npm run build -- --ignoreDeprecations 5.0` followed by `npm start` works. `dev`, `watch` and `watch:start` can't take the flag.
+Until the [build issue](#build-fails-with-hundreds-of-errors-in-node_modulessapphireresult) is fixed, only `node_modules/.bin/tsc --ignoreDeprecations 5.0` (after the workaround install) followed by `yarn start` works. `build`, `dev`, `watch` and `watch:start` use TypeScript 4.9 and fail.
+
+Dependabot (`.github/dependabot.yml`) opens weekly pull requests for dependency updates through Yarn.
 
 Tips:
 
 -   Use a separate test server and a separate bot application for development, so experiments never kick real members.
--   The [Sapphire CLI](https://www.sapphirejs.dev/docs/Guide/CLI/introduction) (`npx @sapphire/cli generate command <name>`) reads `.sapphirerc.json` and scaffolds new pieces in the right folder.
+-   The [Sapphire CLI](https://www.sapphirejs.dev/docs/Guide/CLI/introduction) (`yarn dlx @sapphire/cli generate command <name>`) reads `.sapphirerc.json` and scaffolds new pieces in the right folder.
 
 ---
 
@@ -279,7 +295,7 @@ Tips:
 
 1. Open an issue first using the **Bug report** or **Feature request** template.
 2. Create a branch from `main`.
-3. Run `npm run format` and make sure the build passes (`npm run build -- --ignoreDeprecations 5.0`, see [Troubleshooting](#troubleshooting)).
+3. Run `yarn format` and make sure the build passes (`node_modules/.bin/tsc --ignoreDeprecations 5.0`, see [Troubleshooting](#troubleshooting)).
 4. Open a pull request that links the issue.
 
 ---
