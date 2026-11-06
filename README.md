@@ -241,7 +241,7 @@ New features are expected to land as:
 
 ### Continuous integration
 
-Every pull request to `main` runs these checks through the shared workflows in [`TPN-Labs/GitHub-Actions`](https://github.com/TPN-Labs/GitHub-Actions):
+Every pull request to `main` runs these checks on GitHub-hosted runners, defined in `.github/workflows/ci.yml` and `.github/workflows/semantic_pr.yml`. They are ports of the shared TPN Labs workflows, kept in this repo because a public repository cannot call reusable workflows from a private one:
 
 | Check                       | What it runs                                                                                                                  |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |

@@ -1,8 +1,20 @@
 name: "CI"
 
-# Pipeline logic lives in TPN-Labs/GitHub-Actions; this file only declares triggers and inputs.
-# Checks it produces: "ci / Quality: ESLint", "ci / Quality: TypeScript", "ci / Build & Verify".
-# Every job runs on the Hetzner self-hosted runner inside node:22 (the reusable workflow's defaults).
+# Self-contained Node CI for this public repository.
+#
+# This repo used to call the reusable workflow in TPN-Labs/GitHub-Actions, but that
+# repo is private and GitHub does not let a public repository call reusable workflows
+# from a private one: every run failed at startup with zero jobs, so the required
+# checks never reported. The jobs below are a port of reusable-node-ci.yml with the
+# inputs this repo used baked in.
+#
+# Jobs run on GitHub-hosted runners, not the self-hosted Hetzner runner: anyone can
+# open a pull request against a public repository, and fork PRs must not execute on
+# our own machines.
+#
+# Job names keep the "ci / ..." prefix the reusable workflow produced, so the
+# required status checks in the branch ruleset still match:
+#   "ci / Quality: ESLint", "ci / Quality: TypeScript", "ci / Build & Verify".
 
 on:
   workflow_dispatch:
@@ -17,17 +29,162 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: write
+
+env:
+  NODE_VERSION: "22"
+  DIST_DIR: dist
 
 jobs:
-  ci:
-    uses: TPN-Labs/GitHub-Actions/.github/workflows/reusable-node-ci.yml@main
-    with:
-      working-directory: "."
-      app-label: "Discord Guard"
-      artifact-prefix: discord-guard
-      quality-checks: >-
-        [{"name":"ESLint","command":"yarn lint"},
-         {"name":"TypeScript","command":"yarn check-types"}]
-      build-command: "yarn build"
-      verify-dist: dist
+  quality:
+    name: "ci / Quality: ${{ matrix.name }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ESLint
+            command: yarn lint
+          - name: TypeScript
+            command: yarn check-types
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # package.json pins Yarn 4 via `packageManager`; Corepack provides that version.
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Locate Yarn cache
+        id: yarn-cache
+        run: echo "dir=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Yarn packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.yarn-cache.outputs.dir }}
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: yarn-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Run ${{ matrix.name }}
+        run: ${{ matrix.command }}
+
+  build-and-verify:
+    name: "ci / Build & Verify"
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      pull-requests: write # build summary comment
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Locate Yarn cache
+        id: yarn-cache
+        run: echo "dir=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Yarn packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.yarn-cache.outputs.dir }}
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: yarn-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build
+        run: yarn build
+
+      - name: Verify build output
+        run: |
+          if [ ! -d "$DIST_DIR" ]; then
+            echo "::error::Build output directory '$DIST_DIR' not found"
+            exit 1
+          fi
+          FILE_COUNT=$(find "$DIST_DIR" -type f | wc -l)
+          TOTAL_SIZE=$(du -sh "$DIST_DIR" | cut -f1)
+          echo "Build output: ${FILE_COUNT} files, ${TOTAL_SIZE}"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: discord-guard-build-${{ github.run_number }}
+          path: ${{ env.DIST_DIR }}/
+          retention-days: 7
+          if-no-files-found: warn
+
+      # Pull requests from forks get a read-only token and cannot comment, so skip them.
+      # The comment is informational: never let it fail the required check.
+      - name: Post build summary to PR
+        if: >-
+          always() &&
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const distPath = process.env.DIST_DIR;
+
+            let buildSize = 'N/A';
+            let fileCount = 0;
+
+            if (fs.existsSync(distPath)) {
+              const getSize = (dir) => {
+                let size = 0;
+                for (const file of fs.readdirSync(dir)) {
+                  const filePath = path.join(dir, file);
+                  const stat = fs.statSync(filePath);
+                  if (stat.isDirectory()) size += getSize(filePath);
+                  else { size += stat.size; fileCount++; }
+                }
+                return size;
+              };
+              buildSize = (getSize(distPath) / 1024 / 1024).toFixed(2) + ' MB';
+            }
+
+            const identifier = 'Discord Guard Build Summary';
+            const body = [
+              `## ${identifier}`,
+              '',
+              `**Commit:** \`${context.sha.substring(0, 7)}\``,
+              `**Workflow:** [View Run](${context.payload.repository.html_url}/actions/runs/${context.runId})`,
+              '',
+              '### Build Stats',
+              `- Build Size: ${buildSize}`,
+              `- Files: ${fileCount}`,
+              '',
+              `<sub>Updated at ${new Date().toUTCString()}</sub>`
+            ].join('\n');
+
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+
+            const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number });
+            const existing = comments.find(c => c.user.type === 'Bot' && c.body.includes(identifier));
+
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
