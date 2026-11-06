@@ -1,0 +1,37 @@
+# Nixpacks build plan, used by Coolify (Build Pack: Nixpacks).
+#
+# Why this file exists:
+# - `@sapphire/type` (used by /eval) is a native addon. It ships no prebuilt binary for
+#   Node 22, so it compiles from source with node-gyp at install time. The default
+#   Nixpacks image has no Python or C++ toolchain, so `yarn install` failed with
+#   "gyp ERR! find Python". python3, gcc and gnumake are added below for that build.
+# - Node is pinned to 22, the same major version CI uses. Nixpacks' default package set
+#   (nixpkgs ffeebf0, 2024) only has Node 22.11, which is too old for node-gyp 13 (it crashes
+#   loading undici). `nixpkgsArchive` pins the nixos-26.05 channel instead (Node 22.23).
+# - Yarn 4 comes from Corepack (package.json `packageManager`), not the Yarn 1 Nix package
+#   that Nixpacks picks by default.
+# - The bot starts with `node` directly so it receives SIGTERM when Coolify stops it.
+
+[variables]
+NIXPACKS_NODE_VERSION = '22'
+COREPACK_ENABLE_DOWNLOAD_PROMPT = '0'
+
+[phases.setup]
+nixPkgs = ['nodejs_22', 'python3', 'gcc', 'gnumake']
+# nixos-26.05 as of 2026-11-05. Bump to a newer channel commit to update Node and the toolchain.
+nixpkgsArchive = 'c56a87d8e41ce69bd2af57eb35dcc117a9dfca33'
+
+[phases.install]
+cmds = [
+	'npm install -g corepack@0.34.7',
+	'corepack enable',
+	'corepack prepare --activate',
+	'yarn install --immutable',
+]
+cacheDirectories = ['/root/.yarn/berry/cache']
+
+[phases.build]
+cmds = ['yarn build']
+
+[start]
+cmd = 'node dist/index.js'

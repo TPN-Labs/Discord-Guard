@@ -17,6 +17,7 @@ Built with TypeScript on [discord.js](https://discord.js.org) v13 and the [Sapph
 -   [Requirements](#requirements)
 -   [Setting up the bot in Discord](#setting-up-the-bot-in-discord)
 -   [Running locally](#running-locally)
+-   [Deploying with Coolify](#deploying-with-coolify)
 -   [Troubleshooting](#troubleshooting)
 -   [Configuration](#configuration)
 -   [Commands](#commands)
@@ -151,6 +152,17 @@ yarn start
 ```
 
 Slash commands are registered with Discord when the bot starts. Global commands can take a few minutes to show up in the client the first time.
+
+---
+
+## Deploying with Coolify
+
+The bot deploys with Coolify's **Nixpacks** build pack. The build plan lives in `nixpacks.toml`: Node 22, Yarn 4 through Corepack, `yarn install --immutable`, `yarn build`, then `node dist/index.js`. It also installs Python, gcc and make, which `@sapphire/type` (used by `/eval`) needs to compile its native module.
+
+1. In the application's **General** settings, set **Build Pack** to **Nixpacks**. Leave the install, build and start commands empty: `nixpacks.toml` sets them.
+2. In **Environment Variables**, add `DISCORD_TOKEN` and `OWNERS` (see [Configuration](#configuration)). Untick **Available at Buildtime** for both: the build does not need them, and build-time variables end up in the image. Coolify injects them into the container at runtime, so no `src/.env` file is needed.
+3. The bot is a long-running process, not a website. It does not need a domain, and the Coolify healthcheck should stay off.
+4. Deploy. The container log should end with the bot logging in.
 
 ---
 
