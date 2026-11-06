@@ -1161,7 +1161,8 @@ __metadata:
     colorette: "npm:^2.0.19"
     discord-api-types: "npm:^0.38.57"
     discord.js: "npm:^14.27.0"
-    dotenv-cra: "npm:^3.0.2"
+    dotenv: "npm:^18.0.9"
+    dotenv-expand: "npm:^13.0.0"
     eslint: "npm:^10"
     eslint-config-prettier: "npm:^10"
     globals: "npm:^17.14.0"
@@ -1196,27 +1197,28 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dotenv-cra@npm:^3.0.2":
-  version: 3.0.3
-  resolution: "dotenv-cra@npm:3.0.3"
+"dotenv-expand@npm:^13.0.0":
+  version: 13.0.0
+  resolution: "dotenv-expand@npm:13.0.0"
   dependencies:
-    dotenv: "npm:^10.0.0"
-    dotenv-expand: "npm:^5.1.0"
-  checksum: 10c0/ce3ee40d6c660fc6c0709ca600f92d7dfa1c684499b36383a1afb9b9cf63c6879ad9892d8ed7a7f633ec3ea7c59a5a41650f1d8e4fd47ee3e5ae467bac592423
+    dotenv: "npm:^17.4.2"
+  checksum: 10c0/debebb7807fedebb21078dc661d28d69d373f3a673165afea7f7a8c3b82f0da675e417b2d42c40b1f3d357741c8b24a77d6f4376886092a82456225b3d241b88
   languageName: node
   linkType: hard
 
-"dotenv-expand@npm:^5.1.0":
-  version: 5.1.0
-  resolution: "dotenv-expand@npm:5.1.0"
-  checksum: 10c0/24ac633de853ef474d0421cc639328b7134109c8dc2baaa5e3afb7495af5e9237136d7e6971e55668e4dce915487eb140967cdd2b3e99aa439e0f6bf8b56faeb
+"dotenv@npm:^17.4.2":
+  version: 17.4.2
+  resolution: "dotenv@npm:17.4.2"
+  checksum: 10c0/164f8e77a646c8446867d5b588d26ea6005c8ea7c5eb41cf926f6113d23f2191355f6e0cfd95ea9bab98394a5b0a3f1e51a8399711b666fe55cc7b0bd745f942
   languageName: node
   linkType: hard
 
-"dotenv@npm:^10.0.0":
-  version: 10.0.0
-  resolution: "dotenv@npm:10.0.0"
-  checksum: 10c0/2d8d4ba64bfaff7931402aa5e8cbb8eba0acbc99fe9ae442300199af021079eafa7171ce90e150821a5cb3d74f0057721fbe7ec201a6044b68c8a7615f8c123f
+"dotenv@npm:^18.0.9":
+  version: 18.0.9
+  resolution: "dotenv@npm:18.0.9"
+  bin:
+    dotenv: dist/index.cjs
+  checksum: 10c0/62a70960e611f1d26bf5ade0e0baa7850513f65d56789ba282c8ae7f690411d364457d33d4302b2611cc18157d03dea589ac7e33f1aa85b8f69737b8c05cf726
   languageName: node
   linkType: hard
 
