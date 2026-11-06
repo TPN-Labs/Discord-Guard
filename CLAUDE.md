@@ -23,6 +23,30 @@ Read these at the start of a session, before proposing, implementing, or reviewi
 
 Check claims against the relevant pillar, keep affected pillars consistent when behaviour changes, and record unresolved discrepancies explicitly. The Constitution remains the authoritative governance reference.
 
+## Development flow
+
+Per [`CONSTITUTION.md §3`](./CONSTITUTION.md#3-development-process). A human triages every piece of work (Step 0) before any spec or code; if the classification is not given, ask for it. The classification decides which steps run:
+
+| Classification | Spec work required | Flow |
+|---|---|---|
+| Small fix | None (brief prompt) | 0 → 4 → 5 → 6 |
+| Small fix (functional modification) | Test specs only | 0 → 3 → 4 → 5 → 6 |
+| Feature | Steps 1-2 | 0 → 1 → 2 → 4 → 5 → 6 |
+| Large feature | Steps 1-3 | 0 → 1 → 2 → 3 → 4 → 5 → 6 |
+
+| Step | What happens | Output |
+|---|---|---|
+| -1 Product understanding | Load the pillars above; never work from memory | Priming docs (README, ARCHITECTURE, CONVENTIONS, TESTING) |
+| 0 Triage | Human classifies the work | Classification in the PR template |
+| 1 Specify | AI drafts user stories, `AC-NN` acceptance criteria, metrics; human approves | `docs/specs/<YYYY-MM-DD>-<slug>/requirements.md` |
+| 2 Design | AI drafts pieces, `src/lib/` functions, intents, permissions, state; human approves. No code before this | `design.md` |
+| 3 Test specs & tasks | AI drafts Given/When/Then `SPEC-NN` scenarios traced to ACs, and ordered tasks; human approves | `test-specs/`, `tasks/` |
+| 4 Implementation | One task at a time, test first (see TDD below); spec gaps loop back to the spec | Code + tests |
+| 5 Integration | Full suite, AC trace, Production Readiness checklist (`docs/CONVENTIONS.md §5`), manual check in a test server; human accepts | Completed PR template |
+| 6 Spec maintenance | Specs and README Feature status match what was built | Updated docs |
+
+Every step's output is approved by a human before the next step starts (§4.III).
+
 ## TDD - how it works here
 
 Per [`CONSTITUTION.md §4.I`](./CONSTITUTION.md#i-test-driven-development-tdd---mandatory), no implementation code without a failing test first (Small fixes excepted, unless they change behaviour).
