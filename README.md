@@ -17,10 +17,13 @@ git clone https://github.com/lorencerri/discord-bot-template.git # Clone the rep
 cd discord-bot-template # Enter the directory
 copy .env.example ./src/.env # Copy the .env.example file into the src folder and rename it .env
 nano .env # Fill in the .env file
-npm install # Install dependencies
-npm run build # Build the bot
-npm run start # Start the bot
+corepack enable # Use the Yarn version pinned in package.json
+yarn install # Install dependencies
+yarn build # Build the bot
+yarn start # Start the bot
 ```
+
+This project uses [Yarn](https://yarnpkg.com/) (version pinned via `packageManager` in `package.json`). Do not use `npm install`; commit changes to `yarn.lock` instead.
 
 ### Default Commands
 
