@@ -1,49 +1,44 @@
 import { ApplyOptions } from '@sapphire/decorators';
-import {
-	Command,
-	CommandOptions,
-	RegisterBehavior,
-} from '@sapphire/framework';
+import { Command, CommandOptions, RegisterBehavior } from '@sapphire/framework';
 import { isMessageInstance } from '@sapphire/discord.js-utilities';
 import { ApplicationCommandType } from 'discord-api-types/v10';
-import { Message, MessageEmbed } from 'discord.js';
+import { Message, EmbedBuilder } from 'discord.js';
 
 @ApplyOptions<CommandOptions>({
 	name: 'ping',
-	description: 'Ping bot to see if it is alive.',
+	description: 'Ping bot to see if it is alive.'
 })
 export class PingCommand extends Command {
-	async ping(interaction: Command.ChatInputInteraction | Command.ContextMenuInteraction): Promise<unknown> {
-
-		const embed = new MessageEmbed()
-			.setTitle("Ping?")
-			.setDescription("`Please wait...`");
+	async ping(interaction: Command.ChatInputCommandInteraction | Command.ContextMenuCommandInteraction): Promise<unknown> {
+		const embed = new EmbedBuilder().setTitle('Ping?').setDescription('`Please wait...`');
 
 		const msg = await interaction.reply({ embeds: [embed], ephemeral: true, fetchReply: true });
 
-		if (!(msg instanceof Message)) throw new Error("The returned message is not a Message instance.");
-		if (!isMessageInstance(msg)) throw new Error("Failed to send message.");
+		if (!(msg instanceof Message)) throw new Error('The returned message is not a Message instance.');
+		if (!isMessageInstance(msg)) throw new Error('Failed to send message.');
 
 		const diff = msg.createdTimestamp - interaction.createdTimestamp;
 		const ping = Math.round(this.container.client.ws.ping);
 
-		embed.setTitle('Pong!').setDescription(`Round trip took: ${diff}ms. Heartbeat: ${ping}ms`)
+		embed.setTitle('Pong!').setDescription(`Round trip took: ${diff}ms. Heartbeat: ${ping}ms`);
 		return interaction.editReply({ embeds: [embed] });
 	}
 
-	chatInputRun(interaction: Command.ChatInputInteraction) {
+	chatInputRun(interaction: Command.ChatInputCommandInteraction) {
 		return this.ping(interaction);
 	}
 
-	contextMenuRun(interaction: Command.ContextMenuInteraction) {
+	contextMenuRun(interaction: Command.ContextMenuCommandInteraction) {
 		return this.ping(interaction);
 	}
 
 	registerApplicationCommands(registry: Command.Registry) {
-		registry.registerContextMenuCommand((builder) => builder.setName('ping').setType(ApplicationCommandType.Message),
-			{ behaviorWhenNotIdentical: RegisterBehavior.Overwrite });
+		registry.registerContextMenuCommand((builder) => builder.setName('ping').setType(ApplicationCommandType.Message), {
+			behaviorWhenNotIdentical: RegisterBehavior.Overwrite
+		});
 
-		registry.registerChatInputCommand((builder) => builder.setName('ping').setDescription("Ping bot to see if it is alive."),
-			{ behaviorWhenNotIdentical: RegisterBehavior.Overwrite });
+		registry.registerChatInputCommand((builder) => builder.setName('ping').setDescription('Ping bot to see if it is alive.'), {
+			behaviorWhenNotIdentical: RegisterBehavior.Overwrite
+		});
 	}
 }

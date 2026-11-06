@@ -5,7 +5,7 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
-"@discordjs/builders@npm:^1.13.0, @discordjs/builders@npm:^1.14.1, @discordjs/builders@npm:^1.2.0":
+"@discordjs/builders@npm:^1.13.0, @discordjs/builders@npm:^1.14.1, @discordjs/builders@npm:^1.15.0":
   version: 1.15.0
   resolution: "@discordjs/builders@npm:1.15.0"
   dependencies:
@@ -1127,14 +1127,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"discord-api-types@npm:^0.36.3":
-  version: 0.36.3
-  resolution: "discord-api-types@npm:0.36.3"
-  checksum: 10c0/5f08ca0196c763169402c040de54c3695454ab32ab67590808705cca8479565ac98893fdea527edf53d549c27c155e107353baecc15b927312da93378266e506
-  languageName: node
-  linkType: hard
-
-"discord-api-types@npm:^0.38.1, discord-api-types@npm:^0.38.30, discord-api-types@npm:^0.38.33, discord-api-types@npm:^0.38.49, discord-api-types@npm:^0.38.50":
+"discord-api-types@npm:^0.38.1, discord-api-types@npm:^0.38.30, discord-api-types@npm:^0.38.33, discord-api-types@npm:^0.38.49, discord-api-types@npm:^0.38.50, discord-api-types@npm:^0.38.57":
   version: 0.38.57
   resolution: "discord-api-types@npm:0.38.57"
   checksum: 10c0/84970528136bc6950a000fb4b382cc6e8bab435f28e752db358b16ca2593c34869b749eb17a3206c47b5ca98f1c616eeb32c984701ff4b5edc51c0f2e2ce32d4
@@ -1145,7 +1138,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "discord-bot-template@workspace:."
   dependencies:
-    "@discordjs/builders": "npm:^1.2.0"
+    "@discordjs/builders": "npm:^1.15.0"
     "@discordjs/collection": "npm:^2.1.1"
     "@eslint/js": "npm:^9"
     "@sapphire/decorators": "npm:^6.2.0"
@@ -1166,7 +1159,7 @@ __metadata:
     "@types/node": "npm:^26.6.6"
     "@types/ws": "npm:^8.5.3"
     colorette: "npm:^2.0.19"
-    discord-api-types: "npm:^0.36.3"
+    discord-api-types: "npm:^0.38.57"
     discord.js: "npm:^14.27.0"
     dotenv-cra: "npm:^3.0.2"
     eslint: "npm:^9"
