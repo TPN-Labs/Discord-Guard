@@ -36,7 +36,7 @@
 		"tslib": "^2"
 	},
 	"devDependencies": {
-		"@eslint/js": "^9",
+		"@eslint/js": "^10",
 		"@sapphire/prettier-config": "^2.0.0",
 		"@sapphire/ts-config": "^5.0.3",
 		"@types/node": "^26.6.6",
