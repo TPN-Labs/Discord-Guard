@@ -17,15 +17,14 @@ name: 'CI'
 #   "ci / Quality: ESLint", "ci / Quality: TypeScript", "ci / Build & Verify".
 # "ci / Quality: Prettier" also runs but is not (yet) a required check.
 
+# Pull requests only: CI gates changes before they merge, so it does not re-run on
+# pushes to main.
 on:
-  workflow_dispatch:
-  push:
-    branches: ['main']
   pull_request:
     branches: ['main']
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 permissions:
