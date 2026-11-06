@@ -1,7 +1,15 @@
-name: "Semantic PRs"
+name: 'Semantic PRs'
 
-# Produces the "title / Validate PR title" check.
-# `pull_request_target` runs this file from the base branch, so the check first appears on PRs opened after this file reaches main.
+# Produces the "title / Validate PR title" required check.
+#
+# Port of TPN-Labs/GitHub-Actions' reusable-semantic-pr.yml. That repo is private and a
+# public repository cannot call its reusable workflows, so the check lives here.
+#
+# `pull_request_target` runs this file from the base branch, so edits to it only take
+# effect once they reach main. It never checks out PR code, and the title is passed
+# through an env var (never interpolated into the script), so a malicious title cannot
+# inject shell commands. It runs on a GitHub-hosted runner because anyone can open a
+# pull request against a public repository.
 
 on:
   pull_request_target:
@@ -11,13 +19,61 @@ on:
       - synchronize
       - reopened
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   title:
-    uses: TPN-Labs/GitHub-Actions/.github/workflows/reusable-semantic-pr.yml@main
-    with:
-      # No Linear project tracks this repo yet, so the (<LINEAR-ID>) scope is optional: "<type>: <summary>" or "<type>(<scope>): <summary>".
-      # Flip to true to enforce Constitution §3's "<type>(<LINEAR-ID>): <summary>".
-      require-scope: false
+    name: 'title / Validate PR title'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate PR title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PREFIXES: 'fix|feat|ci|docs|chore|test'
+          # No Linear project tracks this repo yet, so the (<LINEAR-ID>) scope is optional:
+          # "<type>: <summary>" or "<type>(<scope>): <summary>".
+          # Flip to "true" to enforce Constitution §3's "<type>(<LINEAR-ID>): <summary>".
+          REQUIRE_SCOPE: 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "PR author: $PR_AUTHOR"
+          echo "PR title:  $PR_TITLE"
+
+          prefixes="$PREFIXES"
+
+          # Standard contributors: <type>(<LINEAR-ID>): <summary>
+          standard_scope_re="^(${prefixes})\([A-Z]+-[0-9]+\): .+"
+          # Optional-scope variant, used when REQUIRE_SCOPE is false.
+          optional_scope_re="^(${prefixes})(\([^)]+\))?: .+"
+
+          # Dependabot: valid prefix + summary, scope optional, no Linear ticket.
+          dependabot_re="^(${prefixes})(\([^)]+\))?: .+"
+
+          if [ "$PR_AUTHOR" = "dependabot[bot]" ]; then
+            if printf '%s' "$PR_TITLE" | grep -Eq "$dependabot_re"; then
+              echo "✅ Dependabot PR title is valid."
+              exit 0
+            fi
+            echo "::error::Dependabot PR title must be '<type>: <summary>' or '<type>(<scope>): <summary>' using one of: ${prefixes}. Got: '$PR_TITLE'"
+            exit 1
+          fi
+
+          if [ "$REQUIRE_SCOPE" = "true" ]; then
+            if printf '%s' "$PR_TITLE" | grep -Eq "$standard_scope_re"; then
+              echo "✅ PR title follows Constitution §3."
+              exit 0
+            fi
+            echo "::error::PR title must follow Constitution §3: '<type>(<LINEAR-ID>): <summary>', where <type> is one of '${prefixes}' and <LINEAR-ID> is e.g. ENG-28 (e.g. 'docs(ENG-28): reconcile PR-title CI'). Got: '$PR_TITLE'"
+            exit 1
+          fi
+
+          if printf '%s' "$PR_TITLE" | grep -Eq "$optional_scope_re"; then
+            echo "✅ PR title is valid."
+            exit 0
+          fi
+          echo "::error::PR title must be '<type>: <summary>' or '<type>(<scope>): <summary>' using one of: ${prefixes}. Got: '$PR_TITLE'"
+          exit 1

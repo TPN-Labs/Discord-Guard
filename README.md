@@ -228,25 +228,27 @@ New features are expected to land as:
 
 ## Development
 
-| Script             | What it does                                    |
-| ------------------ | ----------------------------------------------- |
-| `yarn build`       | Compiles TypeScript from `src/` into `dist/`    |
-| `yarn start`       | Runs the compiled bot from `dist/`              |
-| `yarn dev`         | Builds, then starts                             |
-| `yarn watch`       | Recompiles on every change                      |
-| `yarn watch:start` | Recompiles and restarts the bot on every change |
-| `yarn lint`        | Lints `src/` with ESLint                        |
-| `yarn check-types` | Type-checks without emitting                    |
-| `yarn format`      | Formats `src/` with Prettier                    |
+| Script              | What it does                                    |
+| ------------------- | ----------------------------------------------- |
+| `yarn build`        | Compiles TypeScript from `src/` into `dist/`    |
+| `yarn start`        | Runs the compiled bot from `dist/`              |
+| `yarn dev`          | Builds, then starts                             |
+| `yarn watch`        | Recompiles on every change                      |
+| `yarn watch:start`  | Recompiles and restarts the bot on every change |
+| `yarn lint`         | Lints `src/` with ESLint                        |
+| `yarn check-types`  | Type-checks without emitting                    |
+| `yarn format`       | Formats `src/` and `.github/` with Prettier     |
+| `yarn format:check` | Checks formatting without writing (CI runs it)  |
 
 ### Continuous integration
 
-Every pull request to `main` runs these checks through the shared workflows in [`TPN-Labs/GitHub-Actions`](https://github.com/TPN-Labs/GitHub-Actions):
+Every pull request to `main` runs these checks on GitHub-hosted runners, defined in `.github/workflows/ci.yml` and `.github/workflows/semantic_pr.yml`. They are ports of the shared TPN Labs workflows, kept in this repo because a public repository cannot call reusable workflows from a private one:
 
 | Check                       | What it runs                                                                                                                  |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `ci / Quality: ESLint`      | `yarn lint`                                                                                                                   |
 | `ci / Quality: TypeScript`  | `yarn check-types`                                                                                                            |
+| `ci / Quality: Prettier`    | `yarn format:check` (not a required check yet)                                                                                |
 | `ci / Build & Verify`       | `yarn build`, then checks that `dist/` was produced                                                                           |
 | `title / Validate PR title` | Title must be `<type>: <summary>` or `<type>(<scope>): <summary>`; `<type>` is `fix`, `feat`, `ci`, `docs`, `chore` or `test` |
 
@@ -263,7 +265,7 @@ Tips:
 
 1. Open an issue first using the **Bug report** or **Feature request** template.
 2. Create a branch from `main`.
-3. Run `yarn format`, then make sure `yarn lint`, `yarn check-types` and `yarn build` pass. CI runs the same checks (see [Continuous integration](#continuous-integration)).
+3. Run `yarn format`, then make sure `yarn lint`, `yarn check-types`, `yarn format:check` and `yarn build` pass. CI runs the same checks (see [Continuous integration](#continuous-integration)).
 4. Open a pull request that links the issue.
 
 ---

@@ -4,11 +4,11 @@ import { envParseArray } from '../lib/env-parser';
 const OWNERS = envParseArray('OWNERS');
 
 export class OwnerOnlyPrecondition extends Precondition {
-	public chatInputRun(interaction: Command.ChatInputInteraction) {
+	public chatInputRun(interaction: Command.ChatInputCommandInteraction) {
 		return this.checkOwner(interaction.user.id);
 	}
 
-	public contextMenuRun(interaction: Command.ContextMenuInteraction) {
+	public contextMenuRun(interaction: Command.ContextMenuCommandInteraction) {
 		return this.checkOwner(interaction.user.id);
 	}
 

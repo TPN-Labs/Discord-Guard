@@ -13,7 +13,7 @@
 	},
 	"homepage": "https://github.com/lorencerri/discord-bot-template#readme",
 	"dependencies": {
-		"@discordjs/builders": "^1.2.0",
+		"@discordjs/builders": "^1.15.0",
 		"@discordjs/collection": "^2.1.1",
 		"@sapphire/decorators": "^6.2.0",
 		"@sapphire/discord-utilities": "^4.0.0",
@@ -29,7 +29,7 @@
 		"@sapphire/type": "^2.2.4",
 		"@sapphire/utilities": "^3.9.2",
 		"colorette": "^2.0.19",
-		"discord-api-types": "^0.36.3",
+		"discord-api-types": "^0.38.57",
 		"discord.js": "^14.27.0",
 		"dotenv-cra": "^3.0.2",
 		"reflect-metadata": "^0.2.2",
@@ -56,7 +56,8 @@
 		"start": "node dist/index.js",
 		"dev": "run-s build start",
 		"watch:start": "tsc-watch --onSuccess \"node ./dist/index.js\"",
-		"format": "prettier --write \"src/**/*.ts\"",
+		"format": "prettier --write \"src/**/*.ts\" \".github/**/*.yml\"",
+		"format:check": "prettier --check \"src/**/*.ts\" \".github/**/*.yml\"",
 		"lint": "eslint src",
 		"check-types": "tsc --noEmit"
 	},
