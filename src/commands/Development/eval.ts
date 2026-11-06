@@ -14,7 +14,7 @@ export class EvalCommand extends Command {
 	async clean(token = '', text = '') {
 		if (text.constructor.name == 'Promise') text = await text;
 		if (typeof text !== 'string')
-			text = require('util').inspect(text, {
+			text = inspect(text, {
 				depth: 1
 			});
 		return text.replace(/`/g, '`' + String.fromCharCode(8203)).replace(/@/g, '@' + String.fromCharCode(8203)).replace(token, '<TOKEN>');
@@ -26,7 +26,6 @@ export class EvalCommand extends Command {
 		let result = null;
 
 		try {
-			// eslint-disable-next-line no-eval
 			result = await eval(code);
 			result = this.clean(interaction?.client?.token || '', result);
 		} catch (error) {

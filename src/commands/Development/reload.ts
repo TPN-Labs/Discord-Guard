@@ -65,8 +65,8 @@ export class ReloadCommand extends Command {
 		const type = interaction.options.getSubcommand(true);
 		const query = (String(interaction.options.getFocused()) || "").trim();
 
-		let stores = this.container.stores;
-		let values: ApplicationCommandOptionChoiceData[] = [];
+		const stores = this.container.stores;
+		const values: ApplicationCommandOptionChoiceData[] = [];
 
 		if (type === 'store') {
 			for (const [_, store] of stores) {

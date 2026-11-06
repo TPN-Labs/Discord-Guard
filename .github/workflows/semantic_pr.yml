@@ -1,0 +1,23 @@
+name: "Semantic PRs"
+
+# Produces the "title / Validate PR title" check.
+# `pull_request_target` runs this file from the base branch, so the check first appears on PRs opened after this file reaches main.
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+
+jobs:
+  title:
+    uses: TPN-Labs/GitHub-Actions/.github/workflows/reusable-semantic-pr.yml@main
+    with:
+      # No Linear project tracks this repo yet, so the (<LINEAR-ID>) scope is optional: "<type>: <summary>" or "<type>(<scope>): <summary>".
+      # Flip to true to enforce Constitution §3's "<type>(<LINEAR-ID>): <summary>".
+      require-scope: false

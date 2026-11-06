@@ -140,64 +140,21 @@ Install the dependencies:
 yarn install
 ```
 
-Install the two package versions the build currently needs (see [Troubleshooting](#build-fails-with-hundreds-of-errors-in-node_modulessapphireresult) for why). Yarn has no `--no-save`, so add them, then put `package.json` and `yarn.lock` back so the workaround is not committed:
+Build and start:
 
 ```bash
-yarn add -D typescript@5.4 discord-api-types@0.36.3
-```
-
-```bash
-git restore package.json yarn.lock
-```
-
-Build and start. Call the TypeScript 5.4 compiler from `node_modules/.bin` directly: `yarn build` still resolves the TypeScript 4.9 recorded in `yarn.lock`.
-
-```bash
-node_modules/.bin/tsc --ignoreDeprecations 5.0
+yarn build
 ```
 
 ```bash
 yarn start
 ```
 
-The next `yarn install` removes the two workaround packages, so run the `yarn add` and `git restore` commands again after every `yarn install`. Don't use `npm install`: dependency changes go through Yarn and are committed in `yarn.lock`.
-
 Slash commands are registered with Discord when the bot starts. Global commands can take a few minutes to show up in the client the first time.
 
 ---
 
 ## Troubleshooting
-
-### Build fails with hundreds of errors in `node_modules/@sapphire/result`
-
-Running a plain `yarn build` after `yarn install` fails with errors like:
-
-```
-node_modules/@sapphire/result/dist/cjs/index.d.cts:1879:89 - error TS1128: Declaration or statement expected.
-
-Found 210 errors in the same file, starting at: node_modules/@sapphire/result/dist/cjs/index.d.cts:17
-```
-
-**Why:** `@sapphire/framework` pulls in `@sapphire/result` 2.8, whose type definitions use TypeScript 5 syntax, while `package.json` pins TypeScript 4.x. `yarn.lock` records both versions, so every install reproduces the error. Older `@sapphire/result` versions don't help: `@sapphire/lexure` requires `^2.8.0`.
-
-**Fix:** build with TypeScript 5.4, as shown in [Running locally](#running-locally):
-
-```bash
-yarn add -D typescript@5.4 discord-api-types@0.36.3
-```
-
-```bash
-git restore package.json yarn.lock
-```
-
-```bash
-node_modules/.bin/tsc --ignoreDeprecations 5.0
-```
-
--   `--ignoreDeprecations 5.0` is needed because the shared `@sapphire/ts-config` still sets an option TypeScript 5 deprecates. TypeScript 5.5 and newer reject it outright, so stay on 5.4.
--   `discord-api-types@0.36.3` fixes a follow-up error in `src/commands/General/ping.ts` (`Argument of type 'ApplicationCommandType.Message' is not assignable to parameter of type 'ContextMenuCommandType'`). `@discordjs/builders` 1.x hoists a newer `discord-api-types` than the one Sapphire and discord.js v13 use, and the two types no longer match.
-
--   `yarn build`, `yarn watch` and `yarn watch:start` use the TypeScript 4.9 from `yarn.lock` and don't pass `--ignoreDeprecations`, so they hit the same error until this is fixed in `package.json` and `tsconfig.json`.
 
 ### `[TOKEN_INVALID]: An invalid token was provided.`
 
@@ -278,9 +235,20 @@ New features are expected to land as:
 | `yarn dev`         | Builds, then starts                             |
 | `yarn watch`       | Recompiles on every change                      |
 | `yarn watch:start` | Recompiles and restarts the bot on every change |
+| `yarn lint`        | Lints `src/` with ESLint                        |
+| `yarn check-types` | Type-checks without emitting                    |
 | `yarn format`      | Formats `src/` with Prettier                    |
 
-Until the [build issue](#build-fails-with-hundreds-of-errors-in-node_modulessapphireresult) is fixed, only `node_modules/.bin/tsc --ignoreDeprecations 5.0` (after the workaround install) followed by `yarn start` works. `build`, `dev`, `watch` and `watch:start` use TypeScript 4.9 and fail.
+### Continuous integration
+
+Every pull request to `main` runs these checks through the shared workflows in [`TPN-Labs/GitHub-Actions`](https://github.com/TPN-Labs/GitHub-Actions):
+
+| Check                       | What it runs                                                                                                                  |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `ci / Quality: ESLint`      | `yarn lint`                                                                                                                   |
+| `ci / Quality: TypeScript`  | `yarn check-types`                                                                                                            |
+| `ci / Build & Verify`       | `yarn build`, then checks that `dist/` was produced                                                                           |
+| `title / Validate PR title` | Title must be `<type>: <summary>` or `<type>(<scope>): <summary>`; `<type>` is `fix`, `feat`, `ci`, `docs`, `chore` or `test` |
 
 Dependabot (`.github/dependabot.yml`) opens weekly pull requests for dependency updates through Yarn.
 
@@ -295,7 +263,7 @@ Tips:
 
 1. Open an issue first using the **Bug report** or **Feature request** template.
 2. Create a branch from `main`.
-3. Run `yarn format` and make sure the build passes (`node_modules/.bin/tsc --ignoreDeprecations 5.0`, see [Troubleshooting](#troubleshooting)).
+3. Run `yarn format`, then make sure `yarn lint`, `yarn check-types` and `yarn build` pass. CI runs the same checks (see [Continuous integration](#continuous-integration)).
 4. Open a pull request that links the issue.
 
 ---
