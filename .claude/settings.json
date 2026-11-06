@@ -1,0 +1,9 @@
+{
+  "extraKnownMarketplaces": {
+    "tpn-labs": { "source": { "source": "github", "repo": "TPN-Labs/ClaudeSkills" } }
+  },
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true,
+    "tpn-labs-skills@tpn-labs": true
+  }
+}

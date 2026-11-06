@@ -4,7 +4,7 @@ The guard and helper bot for **Mihai TPN's Discord server**, maintained by [TPN 
 
 It welcomes people in, makes sure they accept the rules before they can talk, keeps spammers out, and carries a handful of utility commands for the moderators.
 
-Built with TypeScript on [discord.js](https://discord.js.org) v13 and the [Sapphire framework](https://www.sapphirejs.dev).
+Built with TypeScript on [discord.js](https://discord.js.org) v14 and the [Sapphire framework](https://www.sapphirejs.dev).
 
 > **Status: early development.** The project is scaffolded from a Sapphire starter. The features below are the roadmap for this repository; the [Feature status](#feature-status) table says what works today.
 
@@ -80,7 +80,7 @@ Slash commands for moderators and members. See [Commands](#commands).
 
 ## Requirements
 
--   [Node.js](https://nodejs.org) **18 LTS or newer** (discord.js v13 needs at least 16.9)
+-   [Node.js](https://nodejs.org) **22.12 or newer** (CI uses Node 22; the Vitest test runner needs at least 22.12)
 -   Yarn 4, through [Corepack](https://nodejs.org/api/corepack.html) (ships with Node.js; see [Running locally](#running-locally))
 -   A Discord application with a bot user (see below)
 -   Permission to manage the target Discord server
@@ -215,6 +215,7 @@ src/
 │   └── Guardian/          # Moderation and anti-spam (limits)
 ├── listeners/             # Gateway event handlers (ready, command errors, ...)
 └── preconditions/         # Command checks (OwnerOnly)
+tests/                     # Vitest tests, mirroring src/ (e.g. tests/lib/env-parser.test.ts)
 ```
 
 Sapphire loads every file in these folders automatically. To add a command or listener, drop a new file in the matching folder; nothing needs to be registered by hand.
@@ -235,9 +236,11 @@ New features are expected to land as:
 | `yarn dev`          | Builds, then starts                             |
 | `yarn watch`        | Recompiles on every change                      |
 | `yarn watch:start`  | Recompiles and restarts the bot on every change |
-| `yarn lint`         | Lints `src/` with ESLint                        |
-| `yarn check-types`  | Type-checks without emitting                    |
-| `yarn format`       | Formats `src/` and `.github/` with Prettier     |
+| `yarn test`         | Runs the Vitest test suite once                 |
+| `yarn test:watch`   | Re-runs the tests on every change               |
+| `yarn lint`         | Lints `src/` and `tests/` with ESLint           |
+| `yarn check-types`  | Type-checks `src/` and `tests/` without emitting |
+| `yarn format`       | Formats `src/`, `tests/` and `.github/` with Prettier |
 | `yarn format:check` | Checks formatting without writing (CI runs it)  |
 
 ### Continuous integration
@@ -249,7 +252,7 @@ Every pull request to `main` runs these checks on GitHub-hosted runners, defined
 | `ci / Quality: ESLint`      | `yarn lint`                                                                                                                   |
 | `ci / Quality: TypeScript`  | `yarn check-types`                                                                                                            |
 | `ci / Quality: Prettier`    | `yarn format:check` (not a required check yet)                                                                                |
-| `ci / Build & Verify`       | `yarn build`, then checks that `dist/` was produced                                                                           |
+| `ci / Build & Verify`       | `yarn test`, then `yarn build`, then checks that `dist/` was produced                                                         |
 | `title / Validate PR title` | Title must be `<type>: <summary>` or `<type>(<scope>): <summary>`; `<type>` is `fix`, `feat`, `ci`, `docs`, `chore` or `test` |
 
 Dependabot (`.github/dependabot.yml`) opens weekly pull requests for dependency updates through Yarn.
@@ -263,9 +266,11 @@ Tips:
 
 ## Contributing
 
+The engineering rules for this repository are in [`CONSTITUTION.md`](CONSTITUTION.md), with day-to-day conventions in [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md), architecture in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and testing practice in [`docs/TESTING.md`](docs/TESTING.md). AI agents start from [`CLAUDE.md`](CLAUDE.md).
+
 1. Open an issue first using the **Bug report** or **Feature request** template.
 2. Create a branch from `main`.
-3. Run `yarn format`, then make sure `yarn lint`, `yarn check-types`, `yarn format:check` and `yarn build` pass. CI runs the same checks (see [Continuous integration](#continuous-integration)).
+3. Write the tests first (see [`docs/TESTING.md`](docs/TESTING.md)), then run `yarn format` and make sure `yarn lint`, `yarn check-types`, `yarn format:check`, `yarn test` and `yarn build` pass. CI runs the same checks (see [Continuous integration](#continuous-integration)).
 4. Open a pull request that links the issue.
 
 ---

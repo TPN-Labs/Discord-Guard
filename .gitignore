@@ -29,3 +29,5 @@ package-lock.json
 .env.development.local
 .env.test.local
 .env.production.local
+# Claude Code worktrees (Constitution §4.VI)
+.claude/worktrees/
