@@ -56,7 +56,8 @@
 		"start": "node dist/index.js",
 		"dev": "run-s build start",
 		"watch:start": "tsc-watch --onSuccess \"node ./dist/index.js\"",
-		"format": "prettier --write \"src/**/*.ts\"",
+		"format": "prettier --write \"src/**/*.ts\" \".github/**/*.yml\"",
+		"format:check": "prettier --check \"src/**/*.ts\" \".github/**/*.yml\"",
 		"lint": "eslint src",
 		"check-types": "tsc --noEmit"
 	},

@@ -1,4 +1,4 @@
-name: "CI"
+name: 'CI'
 
 # Self-contained Node CI for this public repository.
 #
@@ -15,13 +15,14 @@ name: "CI"
 # Job names keep the "ci / ..." prefix the reusable workflow produced, so the
 # required status checks in the branch ruleset still match:
 #   "ci / Quality: ESLint", "ci / Quality: TypeScript", "ci / Build & Verify".
+# "ci / Quality: Prettier" also runs but is not (yet) a required check.
 
 on:
   workflow_dispatch:
   push:
-    branches: ["main"]
+    branches: ['main']
   pull_request:
-    branches: ["main"]
+    branches: ['main']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -31,12 +32,12 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: "22"
+  NODE_VERSION: '22'
   DIST_DIR: dist
 
 jobs:
   quality:
-    name: "ci / Quality: ${{ matrix.name }}"
+    name: 'ci / Quality: ${{ matrix.name }}'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -47,6 +48,8 @@ jobs:
             command: yarn lint
           - name: TypeScript
             command: yarn check-types
+          - name: Prettier
+            command: yarn format:check
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -78,7 +81,7 @@ jobs:
         run: ${{ matrix.command }}
 
   build-and-verify:
-    name: "ci / Build & Verify"
+    name: 'ci / Build & Verify'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:

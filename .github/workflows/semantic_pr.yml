@@ -1,4 +1,4 @@
-name: "Semantic PRs"
+name: 'Semantic PRs'
 
 # Produces the "title / Validate PR title" required check.
 #
@@ -23,7 +23,7 @@ permissions: {}
 
 jobs:
   title:
-    name: "title / Validate PR title"
+    name: 'title / Validate PR title'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -31,11 +31,11 @@ jobs:
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-          PREFIXES: "fix|feat|ci|docs|chore|test"
+          PREFIXES: 'fix|feat|ci|docs|chore|test'
           # No Linear project tracks this repo yet, so the (<LINEAR-ID>) scope is optional:
           # "<type>: <summary>" or "<type>(<scope>): <summary>".
           # Flip to "true" to enforce Constitution §3's "<type>(<LINEAR-ID>): <summary>".
-          REQUIRE_SCOPE: "false"
+          REQUIRE_SCOPE: 'false'
         shell: bash
         run: |
           set -euo pipefail
