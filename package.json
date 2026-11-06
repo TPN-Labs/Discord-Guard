@@ -38,7 +38,7 @@
 	"devDependencies": {
 		"@eslint/js": "^9",
 		"@sapphire/prettier-config": "^2.0.0",
-		"@sapphire/ts-config": "^3.3.4",
+		"@sapphire/ts-config": "^5.0.3",
 		"@types/node": "^26.6.6",
 		"@types/ws": "^8.5.3",
 		"eslint": "^9",
