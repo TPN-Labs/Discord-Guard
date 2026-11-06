@@ -7,6 +7,10 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
+    # Wait 5 days after a release before proposing it, so broken or
+    # compromised versions have time to be caught and yanked upstream.
+    cooldown:
+      default-days: 5
     open-pull-requests-limit: 10
     labels:
       - 'dependencies'
