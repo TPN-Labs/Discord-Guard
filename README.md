@@ -185,7 +185,7 @@ The bot deploys with Coolify's **Nixpacks** build pack. The build plan lives in 
 
 ### Owner-only commands say "This command can only be used by the owner."
 
-Check `OWNERS` in `src/.env`: the IDs must be separated by **spaces**, not commas. The comment in `.env.example` says commas, but the code splits on spaces.
+Check `OWNERS` in `src/.env` (or in your host's environment variables): the IDs must be separated by single **spaces**. A comma-separated list such as `123,456` is read as one ID that matches nobody, so every owner is locked out. Tabs and line breaks are not separators either.
 
 ---
 
@@ -193,11 +193,11 @@ Check `OWNERS` in `src/.env`: the IDs must be separated by **spaces**, not comma
 
 Settings live in `src/.env`. The file is ignored by git: never commit it.
 
-| Variable        | Required | Description                                                                                                                           |
-| --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `DISCORD_TOKEN` | Yes      | The bot token from the Developer Portal.                                                                                              |
-| `OWNERS`        | Yes      | Discord user IDs allowed to run owner-only commands, **separated by spaces**. Example: `OWNERS=123456789012345678 234567890123456789` |
-| `NODE_ENV`      | No       | `development` (default) or `production`. Changes the startup banner.                                                                  |
+| Variable        | Required | Description                                                                                                                                              |
+| --------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DISCORD_TOKEN` | Yes      | The bot token from the Developer Portal.                                                                                                                 |
+| `OWNERS`        | Yes      | Discord user IDs allowed to run owner-only commands, **separated by single spaces, not commas**. Example: `OWNERS=123456789012345678 234567890123456789` |
+| `NODE_ENV`      | No       | `development` (default) or `production`. Changes the startup banner.                                                                                     |
 | `STATUS_CHANNEL_ID` | No   | Channel ID for the online/offline status messages: a text or announcement channel. Empty turns them off (a warning is logged). A value that isn't a Discord ID (17-20 digits) stops start-up. |
 
 To copy a user or channel ID, turn on **Developer Mode** in Discord (**User Settings → Advanced**), then right-click the user or channel and choose **Copy User ID** / **Copy Channel ID**.
