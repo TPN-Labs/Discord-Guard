@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Draft (Step 2)** - awaiting owner approval |
+| Status | **Approved (Step 2)** - 2026-11-07 |
 | Triage | Feature (0 → 1 → 2 → 4 → 5 → 6) |
 | Requirements | [`requirements.md`](requirements.md) (approved 2026-11-07) |
 | Ticket | ENG-00 - no ticket |
@@ -290,6 +290,16 @@ In a test server with a separate bot application, never the live server, with a 
 
 Screenshots (Constitution §3): this feature adds new messages, so there is no "before" frame. The PR carries cropped "after" shots of one join embed with the rules line and one leave embed with the duration line, and states that no "before" frame exists.
 
-## 15. Approval
+## 15. Implementation notes (Step 4)
 
-- [ ] Human approval of this document (Step 2), including D1-D4.
+Contract polish and one defect found during implementation. Behaviour matches §4-§5 except where noted.
+
+- **Placeholder replacement uses a function.** `String.replace('{name}', name)` treats `$&`, `$'` and `` $` `` in the replacement as patterns, so a display name such as `$'` would have pasted part of the phrase into itself. Both phrases are filled with `replace(placeholder, () => value)`. Found while writing the builders; a test pins it (`showsANameWithReplacementPatternsLiterally`). Not a behaviour change: it is what AC-18 already required.
+- `AnnouncedMember` and `AnnouncementClient` are the structural types §4 described: `AnnouncementClient` is `StatusChannelClient` from the status feature, and a real `GuildMember` or `PartialGuildMember` satisfies `AnnouncedMember`.
+- The bot check runs twice on purpose: once before any Discord call (§5.3 step 2, so a bot join costs nothing) and again inside `shouldAnnounce`, which stays the single tested statement of who is announced.
+- `envParseOptionalSnowflake` takes a named `OptionalSnowflakeKey` union instead of an inline one.
+- Red and green evidence, mutation checks and smoke runs are in [`validation-trail.md`](validation-trail.md).
+
+## 16. Approval
+
+- [x] Human approval of this document (Step 2). Approved by the owner in session, 2026-11-07, with the recommendations for D1-D4.

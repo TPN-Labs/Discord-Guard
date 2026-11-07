@@ -41,10 +41,14 @@ The bot posts the server's rules in a dedicated rules channel and adds a ✅ rea
 
 ### 👋 Join and leave announcements
 
-When someone joins or leaves the server, the bot posts a short message in the announcements channel:
+When someone joins or leaves the server, the bot posts a short message in the announcements channel, in the same Ion Iliescu voice as the status messages:
 
--   **Join:** a welcome that mentions the member and points them to the rules channel.
--   **Leave:** a goodbye with the member's username and how long they had been on the server.
+-   **Join:** a green embed that welcomes the member, pings them (and nobody else), and links the rules channel when `RULES_CHANNEL_ID` is set.
+-   **Leave:** a grey embed with the member's display name and username, and how long they had been on the server, for example **"⏳ A stat cu noi 3 zile și 4 ore."** Kicks and bans get the same goodbye: Discord reports all three the same way.
+-   Every join is announced, including a member who left and came back: the bot keeps no storage, so it can't tell a first visit from a return. Bots joining or leaving are not announced.
+-   Names are shown exactly as written, never as a ping or as formatting. Leave `ANNOUNCEMENTS_CHANNEL_ID` empty to turn announcements off.
+
+The phrases and the reasoning behind them are in [`docs/specs/2026-11-07-join-leave-announcements/`](docs/specs/2026-11-07-join-leave-announcements/requirements.md).
 
 ### 🛡️ Anti-spam
 
@@ -82,7 +86,7 @@ Slash commands for moderators and members. See [Commands](#commands).
 | Bot core, slash command loading, logging | ✅ Done      |
 | `/ping`, `/eval`, `/reload`              | ✅ Done      |
 | Rules message with ✅ verification       | 🗓️ Planned   |
-| Join / leave announcements               | 🗓️ Planned   |
+| Join / leave announcements               | 🧪 Built, awaiting test-server acceptance |
 | Anti-spam with automatic kick            | 🗓️ Planned   |
 | `/limits` (anti-spam thresholds)         | 🚧 Stub only |
 | Online / offline status messages         | 🧪 Built, awaiting test-server acceptance |
@@ -199,6 +203,8 @@ Settings live in `src/.env`. The file is ignored by git: never commit it.
 | `OWNERS`        | Yes      | Discord user IDs allowed to run owner-only commands, **separated by single spaces, not commas**. Example: `OWNERS=123456789012345678 234567890123456789` |
 | `NODE_ENV`      | No       | `development` (default) or `production`. Changes the startup banner.                                                                                     |
 | `STATUS_CHANNEL_ID` | No   | Channel ID for the online/offline status messages: a text or announcement channel. Empty turns them off (a warning is logged). A value that isn't a Discord ID (17-20 digits) stops start-up. |
+| `ANNOUNCEMENTS_CHANNEL_ID` | No | Channel ID for the join and leave announcements: a text or announcement channel. Empty turns them off (a warning is logged). A value that isn't a Discord ID stops start-up. |
+| `RULES_CHANNEL_ID` | No | The server's rules channel. When set, join announcements end with a link to it. Empty leaves the link out. A value that isn't a Discord ID stops start-up. |
 
 To copy a user or channel ID, turn on **Developer Mode** in Discord (**User Settings → Advanced**), then right-click the user or channel and choose **Copy User ID** / **Copy Channel ID**.
 
@@ -231,14 +237,15 @@ src/
 ├── lib/
 │   ├── setup.ts           # Loads src/.env and registers Sapphire plugins
 │   ├── constants.ts
-│   ├── env-parser.ts      # Reads OWNERS and STATUS_CHANNEL_ID
+│   ├── env-parser.ts      # Reads OWNERS and the optional channel IDs
+│   ├── announcements/     # Join and leave announcements: copy, wording, decisions
 │   ├── status/            # Online/offline status messages: copy, decisions, shutdown hooks
 │   └── utils.ts
 ├── commands/
 │   ├── General/           # Commands for everyone (ping)
 │   ├── Development/       # Owner tools (eval, reload)
 │   └── Guardian/          # Moderation and anti-spam (limits)
-├── listeners/             # Gateway event handlers (ready, statusOnline, command errors, ...)
+├── listeners/             # Gateway event handlers (ready, statusOnline, member join/leave, command errors, ...)
 └── preconditions/         # Command checks (OwnerOnly)
 tests/                     # Vitest tests, mirroring src/ (e.g. tests/lib/env-parser.test.ts)
 ```
@@ -247,7 +254,7 @@ Sapphire loads every file in these folders automatically. To add a command or li
 
 New features are expected to land as:
 
--   `listeners/` handlers for `guildMemberAdd` / `guildMemberRemove` (announcements), `messageReactionAdd` / `messageReactionRemove` (verification) and `messageCreate` (anti-spam),
+-   `listeners/` handlers for `messageReactionAdd` / `messageReactionRemove` (verification) and `messageCreate` (anti-spam),
 -   commands under `commands/Guardian/` for moderator controls.
 
 ---
