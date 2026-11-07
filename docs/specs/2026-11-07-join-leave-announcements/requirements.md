@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Approved (Step 1)** - 2026-11-07 |
+| Status | **Approved (Step 1)** - 2026-11-07; amended in PR review 2026-11-07 (AC-21, AC-22, Q4) |
 | Triage | Feature (0 → 1 → 2 → 4 → 5 → 6) - classified by the owner in session, 2026-11-07 |
 | Ticket | ENG-00 - no ticket |
 | Date | 2026-11-07 |
@@ -23,6 +23,7 @@ The bot speaks as **Ion Iliescu**, a parody of the former Romanian president, in
 - Use one fixed join phrase and one fixed leave phrase (§6).
 - Ping the new member in their join announcement, and point them to the server's rules channel when it is configured.
 - Show, in the leave announcement, how long the member had been on the server, when the bot knows it.
+- Cap how many announcements can wait to be posted, so a raid can't build an unbounded backlog (AC-21, AC-22).
 
 **Out of scope (non-goals)**
 
@@ -32,7 +33,7 @@ The bot speaks as **Ion Iliescu**, a parody of the former Romanian president, in
 - Direct messages to the member, images, welcome cards, or role assignment on join.
 - Catching up on joins and leaves that happened while the bot was offline.
 - Changing the phrases at run time, or rotating between several. They live in code and change through a PR, as the status phrases do.
-- Rate-limiting announcements during a raid (Q4).
+- Detecting a raid, or summarising skipped members in Discord. Skipped announcements are only counted in the log (AC-22); raid detection belongs to the anti-spam feature.
 
 ## 3. Roles
 
@@ -74,6 +75,11 @@ Roles as defined in [`docs/CONVENTIONS.md §2`](../../CONVENTIONS.md#2-domain-vo
 
 - **AC-13** - Joins and leaves of **bot accounts** are not announced (Q2).
 - **AC-14** - Only joins and leaves in the server that owns the announcements channel are announced. If the bot is in another server, that server's joins and leaves are ignored.
+
+### Bursts (US-04)
+
+- **AC-21** - At most **10** announcements are waiting to be posted at any time. A join or leave that arrives while 10 are waiting is not announced.
+- **AC-22** - When the bot starts skipping announcements, it logs one warning. When nothing is waiting any more, it logs one warning with how many joins and leaves it skipped. It never logs one line per skipped member.
 
 ### Configuration and failure modes (US-03, US-04)
 
@@ -141,6 +147,7 @@ Measured in a test server with a separate bot application during Step 5 acceptan
 | M-06 | New members notified by their own join announcement | 5 of 5 |
 | M-07 | Join announcements whose rules line opens the rules channel when clicked | 5 of 5 |
 | M-08 | Duration examples in §6.4 rendered exactly (Vitest) | 8 of 8 |
+| M-09 | Announcements waiting to be posted at once while 200 joins arrive together (Vitest) | ≤ 10 |
 
 ## 8. Permissions and configuration impact
 
@@ -156,7 +163,7 @@ Answered by the owner in session, 2026-11-07.
 - **Q1 - Ping the new member?** *Resolved: yes, ping.* The join announcement's message text mentions the new member and `allowedMentions` is limited to their ID (AC-02, AC-19). The draft recommended no ping. **Note for the verification feature:** once new members can see only the rules channel, Discord is not expected to notify a member about a mention in a channel they can't view, so the ping may stop reaching them then. Unverified here; check it at that feature's Step 5.
 - **Q2 - Announce bots?** *Resolved: skip bots* (AC-13).
 - **Q3 - Rules channel line.** *Resolved: add it.* The server already has a rules channel. The join announcement points to it through `RULES_CHANNEL_ID` (AC-05 to AC-07). The line's wording in §6.3 was approved with this document.
-- **Q4 - Raids.** *Resolved: accept for now.* A raid of 200 joins posts 200 announcements; discord.js queues them under Discord's rate limits, so they arrive late but the bot holds no growing state of its own. The anti-spam feature is the place to detect raids and could pause announcements then.
+- **Q4 - Raids.** *Revised in PR review, 2026-11-07: cap the backlog (AC-21, AC-22).* The first answer accepted one announcement per join during a raid. Review on [TPN-Labs/Discord-Guard#26](https://github.com/TPN-Labs/Discord-Guard/pull/26) pointed out that Discord's rate limits cap throughput, not the queue of sends waiting in discord.js, so a raid would still grow that queue without bound, against [`CONVENTIONS.md §5`](../../CONVENTIONS.md#5-production-readiness-checklist) ("no unbounded queue of Discord calls during a spam wave or raid"). At most 10 announcements now wait at once; the rest are skipped and counted in the log. Detecting the raid itself stays with the anti-spam feature.
 
 ## 10. Approval
 

@@ -16,7 +16,14 @@ Red-then-green evidence for every unit, in the order it was built (Constitution 
 | 7 | `MemberAnnouncer` | `tests/lib/announcements/announcer.test.ts` | 19 failed (19) | `Error: not implemented`; `promise rejected "Error: not implemented" instead of resolving` | 167 passed |
 | 8 | Three listeners, `src/index.ts` wiring (partial, env parsing, container) | none (design §11: one-line delegates, covered through `MemberAnnouncer` and the smoke runs below) | - | - | 167 passed |
 
-No test was edited to make it pass. Final run: `yarn lint`, `yarn check-types`, `yarn format:check`, `yarn test` (15 files, 167 passed) and `yarn build` all exit 0.
+### PR review round ([TPN-Labs/Discord-Guard#26](https://github.com/TPN-Labs/Discord-Guard/pull/26))
+
+| # | Unit | Test file | Red run | Reason for red | Green (whole suite) |
+|---|---|---|---|---|---|
+| 9 | `formatDuration`: years before months | `tests/lib/announcements/duration.test.ts` | 1 failed, 28 passed (29) | `expected 'un an' to be 'un an și o lună'` for a join on 2024-02-29 and a leave on 2025-03-28 - months were counted from the join date | 168 passed |
+| 10 | `MemberAnnouncer` backlog cap (AC-21, AC-22) | `tests/lib/announcements/announcer.test.ts` | 4 failed, 22 passed (26) | `expected "vi.fn()" to be called 10 times, but got 15 times`; `expected 200 to be less than or equal to 10`; no skip warnings logged. The 3 new tests that passed on first run are guards that hold without a cap (the constant, a failed send frees its slot, bots don't count). | 175 passed |
+
+No test was edited to make it pass. Final run: `yarn lint`, `yarn check-types`, `yarn format:check`, `yarn test` (15 files, 175 passed) and `yarn build` all exit 0.
 
 ## Mutation checks
 
@@ -31,6 +38,11 @@ Deliberate breakages, each run once against the finished code and then reverted.
 | M5 | `formatMemberName` stops escaping the display name | **Killed:** `escapesMarkdownSoTheNameShowsExactlyAsWritten` |
 | M6 | `romanianCount` adds `de` from 21 instead of 20 | **Killed:** `addsDeFromTwentyUnlessTheLastTwoDigitsAreOneToNineteen (20 day)` |
 | M7 | Leave announcement shows the duration only when the join date is unknown | **Killed:** three leave tests |
+
+| M8 | Backlog cap lifted (`inProgress > 1000`) | **Killed:** four backlog-cap tests, including `neverHasMoreThanTenInProgressDuringARaidOf200Joins` |
+| M9 | A warning for every skipped announcement | **Killed:** `skipsJoinsBeyondTheCapAndWarnsOnceWhenSkippingStarts`, `logsHowManyWereSkippedOnceTheBacklogDrains` |
+| M10 | A finished announcement never frees its slot | **Killed:** three tests, including `freesASlotWhenAnAnnouncementFails` |
+| M11 | Months counted from the join date again | **Killed:** `countsWholeYearsBeforeWholeMonthsFromALeapDay` |
 
 Not mutation-tested: `partials: [Partials.GuildMember]` in `src/index.ts`. Its effect only exists with a live gateway; it is checked by hand at Step 5 (M-03).
 

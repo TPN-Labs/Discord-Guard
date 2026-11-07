@@ -32,6 +32,9 @@ export interface MemberAnnouncerOptions {
 
 type AnnouncementKind = 'join' | 'leave';
 
+/** Announcements in progress at once; more during a raid are skipped (requirements AC-21). */
+export const MAX_PENDING_ANNOUNCEMENTS = 10;
+
 /**
  * Posts join and leave announcements (docs/specs/2026-11-07-join-leave-announcements). Never throws: every
  * failure is logged with the channel, member and guild IDs, and the bot keeps running.
@@ -41,6 +44,10 @@ export class MemberAnnouncer {
 	private readonly rulesChannelId: string | null;
 	private readonly logger: AnnouncementLogger;
 	private readonly now: () => Date;
+	/** Announcements between the cap check and the end of their send; never above MAX_PENDING_ANNOUNCEMENTS. */
+	private inProgress = 0;
+	/** Joins and leaves skipped since the backlog last drained. */
+	private skipped = 0;
 
 	public constructor({ channelId, rulesChannelId, logger, now = () => new Date() }: MemberAnnouncerOptions) {
 		this.channelId = channelId;
@@ -105,6 +112,35 @@ export class MemberAnnouncer {
 		if (channelId === null || member.user.bot) return;
 
 		const context = `member ${member.id} in guild ${member.guild.id}`;
+		if (this.inProgress >= MAX_PENDING_ANNOUNCEMENTS) {
+			if (this.skipped++ === 0) {
+				this.logger.warn(
+					`[Announcements] ${MAX_PENDING_ANNOUNCEMENTS} announcements are already in progress; skipping new joins and leaves until they finish (first skipped: ${kind} of ${context}).`
+				);
+			}
+			return;
+		}
+
+		// Counted before the first await, so a burst of events can't all pass the check at once (AC-21).
+		this.inProgress++;
+		try {
+			await this.post(kind, member, context, channelId, build);
+		} finally {
+			this.inProgress--;
+			if (this.inProgress === 0 && this.skipped > 0) {
+				this.logger.warn(`[Announcements] Backlog drained; skipped ${this.skipped} join and leave announcements.`);
+				this.skipped = 0;
+			}
+		}
+	}
+
+	private async post(
+		kind: AnnouncementKind,
+		member: AnnouncedMember,
+		context: string,
+		channelId: string,
+		build: () => JoinAnnouncementPayload | LeaveAnnouncementPayload
+	): Promise<void> {
 		const resolved = await resolveStatusChannel(member.client, channelId);
 		if (!resolved.ok) {
 			this.logger.error(`[Announcements] No ${kind} announcement for ${context}: channel ${channelId} is unusable: ${resolved.reason}.`);

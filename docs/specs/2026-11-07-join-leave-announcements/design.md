@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Approved (Step 2)** - 2026-11-07 |
+| Status | **Approved (Step 2)** - 2026-11-07; amended in PR review 2026-11-07 (§5.3 backlog cap, §5.5 wording) |
 | Triage | Feature (0 → 1 → 2 → 4 → 5 → 6) |
 | Requirements | [`requirements.md`](requirements.md) (approved 2026-11-07) |
 | Ticket | ENG-00 - no ticket |
@@ -171,6 +171,7 @@ Same skeleton for both; each runs once per event and never rejects.
 
 1. `channelId === null` → return silently (the warning was logged once in §5.2).
 2. `member.user.bot` → return (AC-13). Checked before any Discord call.
+   - *(2a)* **Backlog cap (AC-21, AC-22).** If `MAX_PENDING_ANNOUNCEMENTS` (10) announcements are already in progress, count this one as skipped and return; the first skip of a burst logs one **warn**. Otherwise increment the in-progress count synchronously, before the first `await`, and decrement it in a `finally` once the event is handled, whatever the outcome. When the count returns to 0 with skips recorded, log one **warn** with the number skipped and reset it. Off and bot events never enter the count.
 3. `resolveStatusChannel(member.client, channelId)`. `channels.fetch` is answered from the cache the `Guilds` intent keeps, so this is normally no REST call, and permission changes take effect immediately. On failure, log **error** with channel ID, reason, member ID and guild ID; no retry (AC-17).
 4. `shouldAnnounce({ isBot, memberGuildId: member.guild.id, channelGuildId: channel.guildId })` false → return (AC-14).
 5. Build and send:
@@ -186,7 +187,7 @@ Same skeleton for both; each runs once per event and never rejects.
 
 ### 5.5 Duration (`formatDuration`)
 
-- Calendar arithmetic in **UTC**: whole years first, then whole months, each step adding to the start date; a day that doesn't exist in the target month (31 January + 1 month) clamps to the month's last day. The rest is split into days, hours and minutes. Seconds are dropped.
+- Calendar arithmetic in **UTC**: whole years from the join date first, then whole months counted from the date those years reach (not from the join date); a day that doesn't exist in the target month (31 January + 1 month) clamps to the month's last day. The rest is split into days, hours and minutes. Seconds are dropped.
 - Under 60 seconds → `mai puțin de un minut`.
 - Otherwise the largest non-zero unit, plus `și` and the next smaller unit when that one is non-zero; never a third unit, and never a zero unit (`2 luni`, not `2 luni și 0 zile`).
 - `joinedAt` later than `leftAt` (clock skew) → treated as under a minute rather than negative.
@@ -197,11 +198,11 @@ Same skeleton for both; each runs once per event and never rejects.
 - **Intents:** no change. `GuildMembers` (privileged, already requested) delivers both events and allows `members.fetch()`. `Guilds` caches channels for the per-event resolution.
 - **Partials:** `Partials.GuildMember` is new. Side effects in the installed version: `guildMemberUpdate` may also be emitted with a partial old member, and `guild.members.me` can return a partial instead of `null`. No listener in this repository handles `guildMemberUpdate`, and nothing reads `members.me` (D4).
 - **Bot permissions** in the announcements channel: View Channels, Send Messages, Embed Links - already in the README table. Pinging one member needs no permission; **Mention @everyone, @here and All Roles** is not requested. The rules channel needs no bot permission: the bot only links to it.
-- **Discord API calls:** one member-list request per process start; one `POST /channels/{id}/messages` per join or leave. Channel lookups are cache hits. A raid is bounded by Discord's rate limits through discord.js's queue (requirements Q4).
+- **Discord API calls:** one member-list request per process start; one `POST /channels/{id}/messages` per join or leave. Channel lookups are cache hits. Discord's rate limits cap throughput, not the queue of sends waiting inside discord.js, so the bot itself caps in-progress announcements at 10 (§5.3 step 2a); during a raid the rest are skipped and counted.
 
 ## 7. State and storage
 
-- **In memory:** the discord.js member cache for the one server, filled by `members.fetch()` at start-up and kept current by the join and leave events. Its size is the server's member count, not a function of message traffic; a raid of new joins grows it by exactly the members who joined. `MemberAnnouncer` itself holds only its configuration (§4.V "Bounded").
+- **In memory:** the discord.js member cache for the one server, filled by `members.fetch()` at start-up and kept current by the join and leave events. Its size is the server's member count, not a function of message traffic; a raid of new joins grows it by exactly the members who joined. `MemberAnnouncer` itself holds its configuration plus two counters, in progress (≤ 10) and skipped (§4.V "Bounded").
 - **Durable:** none. Join dates come from Discord on each start.
 - **No ADR.** Constitution §6 open item 3 stays open and unaffected.
 
@@ -219,13 +220,14 @@ Same skeleton for both; each runs once per event and never rejects.
 | Member was never cached (left before the fetch finished) | Leave announcement, no duration line, display name without server nickname | info on send | yes | AC-12 |
 | Member is a bot | Nothing | nothing | yes | AC-13 |
 | Event from another server | Nothing | nothing | yes | AC-14 |
-| Raid (hundreds of joins) | Announcements arrive late, one per join | info per send | yes | Q4 |
+| Raid (more than 10 joins or leaves in progress at once) | Up to 10 announcements in progress; the rest are not posted | one warn when skipping starts, one with the count when the backlog drains | yes | AC-21, AC-22 |
 
 ## 9. Non-functional requirements
 
 | Requirement | Number |
 |---|---|
 | Discord calls per announcement | 1 send; channel lookup from cache |
+| Announcements in progress at once | ≤ 10 (`MAX_PENDING_ANNOUNCEMENTS`); excess skipped |
 | Start-up cost | 1 member-list request, bounded by discord.js's 120 s default; never blocks other features |
 | Memory held by this feature | O(1) beyond the discord.js member cache (§7) |
 | Join or leave to announcement | target ≤ 5 s (M-04) |
@@ -248,7 +250,7 @@ TDD order for Step 4: each row's tests are written first and seen red. Tests mir
 | 4 | AC-18 | `formatMemberName` | `tests/lib/announcements/member-name.test.ts` |
 | 5 | AC-02, AC-05, AC-06, AC-09, AC-11, AC-12, AC-19 | `buildJoinAnnouncement`, `buildLeaveAnnouncement` | `tests/lib/announcements/message.test.ts` |
 | 6 | AC-13, AC-14 | `shouldAnnounce` | `tests/lib/announcements/should-announce.test.ts` |
-| 7 | AC-01, AC-04, AC-08, AC-12, AC-15, AC-17, AC-20 | `MemberAnnouncer` | `tests/lib/announcements/announcer.test.ts` (off, bot, other guild, unusable channel, send rejects with 50013, partial member, member fetch fails, token never logged) |
+| 7 | AC-01, AC-04, AC-08, AC-12, AC-15, AC-17, AC-20, AC-21, AC-22 | `MemberAnnouncer` | `tests/lib/announcements/announcer.test.ts` (off, bot, other guild, unusable channel, send rejects with 50013, partial member, member fetch fails, token never logged) |
 | 8 | AC-12 | `index.ts` partials | manual (M-03); a one-line option, covered end to end |
 
 The three listeners aren't unit-tested: each is a one-line delegate, as `statusOnline` is. Their behaviour is covered through `MemberAnnouncer` and at Step 5.
@@ -299,6 +301,11 @@ Contract polish and one defect found during implementation. Behaviour matches §
 - The bot check runs twice on purpose: once before any Discord call (§5.3 step 2, so a bot join costs nothing) and again inside `shouldAnnounce`, which stays the single tested statement of who is announced.
 - `envParseOptionalSnowflake` takes a named `OptionalSnowflakeKey` union instead of an inline one.
 - Red and green evidence, mutation checks and smoke runs are in [`validation-trail.md`](validation-trail.md).
+
+**Amended in PR review ([TPN-Labs/Discord-Guard#26](https://github.com/TPN-Labs/Discord-Guard/pull/26), 2026-11-07):**
+
+- **Years before months.** The first implementation counted all whole months from the join date, so a join on 2024-02-29 and a leave on 2025-03-28 read `un an` instead of `un an și o lună`. It now counts whole years from the join date, then whole months from the date those years reach, as §5.5 now spells out. A leap-day test pins it.
+- **Backlog cap.** Added §5.3 step 2a and requirements AC-21 / AC-22 after review pointed out that rate limits bound throughput, not the number of sends waiting in discord.js.
 
 ## 16. Approval
 

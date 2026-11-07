@@ -1,6 +1,6 @@
 import { ChannelType, PermissionsBitField, RESTJSONErrorCodes, type APIEmbed } from 'discord.js';
 import { describe, expect, it, vi } from 'vitest';
-import { MemberAnnouncer, type AnnouncedMember, type AnnouncementClient } from '../../../src/lib/announcements/announcer';
+import { MAX_PENDING_ANNOUNCEMENTS, MemberAnnouncer, type AnnouncedMember, type AnnouncementClient } from '../../../src/lib/announcements/announcer';
 import type { JoinAnnouncementPayload } from '../../../src/lib/announcements/message';
 import {
 	discordApiError,
@@ -220,6 +220,115 @@ describe('MemberAnnouncer.announceLeave', () => {
 
 		expect(logged(logger.error)).toContain('socket hang up');
 		expect(logged(logger.error)).toContain(FAKE_MEMBER_ID);
+	});
+});
+
+/** A send that stays pending until released, to hold announcements in progress. */
+function heldSends() {
+	const releases: (() => void)[] = [];
+	let inFlight = 0;
+	let maxInFlight = 0;
+	const send = () =>
+		new Promise<unknown>((resolve) => {
+			inFlight++;
+			maxInFlight = Math.max(maxInFlight, inFlight);
+			releases.push(() => {
+				inFlight--;
+				resolve({});
+			});
+		});
+	return { send, releaseAll: () => releases.splice(0).forEach((release) => release()), maxInFlight: () => maxInFlight };
+}
+
+async function settle() {
+	for (let i = 0; i < 10; i++) await Promise.resolve();
+}
+
+// requirements.md AC-21, AC-22.
+describe('MemberAnnouncer backlog cap', () => {
+	it('capsAnnouncementsInProgressAtTen', () => {
+		expect(MAX_PENDING_ANNOUNCEMENTS).toBe(10);
+	});
+
+	it('skipsJoinsBeyondTheCapAndWarnsOnceWhenSkippingStarts', async () => {
+		const held = heldSends();
+		const { announcer, channel, logger, member } = setup({ channel: { send: held.send } });
+
+		const runs = Array.from({ length: 15 }, () => announcer.announceJoin(member()));
+		await settle();
+
+		expect(channel.send).toHaveBeenCalledTimes(10);
+		expect(logger.warn).toHaveBeenCalledTimes(1);
+
+		held.releaseAll();
+		await Promise.all(runs);
+	});
+
+	it('logsHowManyWereSkippedOnceTheBacklogDrains', async () => {
+		const held = heldSends();
+		const { announcer, logger, member } = setup({ channel: { send: held.send } });
+
+		const runs = [
+			...Array.from({ length: 12 }, () => announcer.announceJoin(member())),
+			...Array.from({ length: 3 }, () => announcer.announceLeave(member()))
+		];
+		await settle();
+		held.releaseAll();
+		await Promise.all(runs);
+
+		expect(logger.warn).toHaveBeenCalledTimes(2);
+		expect(logged(logger.warn).split('\n')[1]).toContain('5');
+	});
+
+	it('announcesAgainOnceTheBacklogHasDrained', async () => {
+		const held = heldSends();
+		const { announcer, channel, member } = setup({ channel: { send: held.send } });
+
+		const runs = Array.from({ length: 12 }, () => announcer.announceJoin(member()));
+		await settle();
+		held.releaseAll();
+		await Promise.all(runs);
+		const next = announcer.announceJoin(member());
+		await settle();
+		held.releaseAll();
+		await next;
+
+		expect(channel.send).toHaveBeenCalledTimes(11);
+	});
+
+	it('freesASlotWhenAnAnnouncementFails', async () => {
+		const { announcer, channel, member } = setup({ channel: { send: async () => Promise.reject(new Error('socket hang up')) } });
+
+		for (let i = 0; i < 12; i++) await announcer.announceJoin(member());
+
+		expect(channel.send).toHaveBeenCalledTimes(12);
+	});
+
+	it('neverHasMoreThanTenInProgressDuringARaidOf200Joins', async () => {
+		const held = heldSends();
+		const { announcer, member } = setup({ channel: { send: held.send } });
+
+		const runs = Array.from({ length: 200 }, () => announcer.announceJoin(member()));
+		await settle();
+		held.releaseAll();
+		await Promise.all(runs);
+
+		expect(held.maxInFlight()).toBeLessThanOrEqual(10);
+	});
+
+	it('doesNotCountBotsTowardsTheCap', async () => {
+		const held = heldSends();
+		const { announcer, channel, logger, member } = setup({ channel: { send: held.send } });
+
+		const bots = Array.from({ length: 20 }, () => announcer.announceJoin(member({ bot: true })));
+		const person = announcer.announceJoin(member());
+		await settle();
+
+		expect(channel.send).toHaveBeenCalledTimes(1);
+		expect(logger.warn).not.toHaveBeenCalled();
+
+		held.releaseAll();
+		await Promise.all([...bots, person]);
 	});
 });
 

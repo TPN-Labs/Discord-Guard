@@ -47,6 +47,7 @@ When someone joins or leaves the server, the bot posts a short message in the an
 -   **Leave:** a grey embed with the member's display name and username, and how long they had been on the server, for example **"⏳ A stat cu noi 3 zile și 4 ore."** Kicks and bans get the same goodbye: Discord reports all three the same way.
 -   Every join is announced, including a member who left and came back: the bot keeps no storage, so it can't tell a first visit from a return. Bots joining or leaving are not announced.
 -   Names are shown exactly as written, never as a ping or as formatting. Leave `ANNOUNCEMENTS_CHANNEL_ID` empty to turn announcements off.
+-   During a raid, at most 10 announcements are in progress at once; joins and leaves beyond that are skipped and only counted in the bot's log.
 
 The phrases and the reasoning behind them are in [`docs/specs/2026-11-07-join-leave-announcements/`](docs/specs/2026-11-07-join-leave-announcements/requirements.md).
 

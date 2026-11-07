@@ -57,7 +57,7 @@ The token grants full control of the bot. It never appears in logs, replies, tes
 
 None persisted. Everything the bot knows is in memory and lost on restart; Discord itself is the only durable store (roles, the rules message and its reactions). Status messages use the same pattern: at start-up the bot reads up to 100 recent messages in the status channel, and if its own last status message there is an online one, the previous run ended without posting offline - an unplanned outage. The planned settings and anti-spam limits need durable storage; choosing it is a Step 2 design decision recorded as an ADR in `docs/adr/` (Constitution §6, open item 3).
 
-Join and leave announcements hold no state of their own. At start-up the bot fetches the announcements server's member list into discord.js's member cache, so each member's join date is known when they leave; the cache is the size of the server and is kept current by the join and leave events. When a member's join date isn't known (the fetch failed, or they left before it finished), the leave announcement leaves out the time on the server.
+Join and leave announcements hold only two counters (announcements in progress, capped at 10, and skipped ones). At start-up the bot fetches the announcements server's member list into discord.js's member cache, so each member's join date is known when they leave; the cache is the size of the server and is kept current by the join and leave events. When a member's join date isn't known (the fetch failed, or they left before it finished), the leave announcement leaves out the time on the server.
 
 In-memory state that grows with traffic - per-member message history for anti-spam, for example - must be capped or expire (Constitution §4.V).
 
@@ -73,6 +73,7 @@ In-memory state that grows with traffic - per-member message history for anti-sp
 | Status channel | Missing Read Message History | Online message posted without the outage line; warning logged. Discord returns an empty history rather than an error, so the permission is checked up front |
 | Announcements channel | Unset | warn once at ready; no announcements; the bot keeps running |
 | Announcements channel | Unknown, wrong type, or missing View / Send / Embed Links; or a send refused | error per announcement with the channel, member and guild IDs; no retry; the bot keeps running |
+| Announcements | More than 10 joins or leaves in progress at once (a raid) | the rest are skipped; one warn when skipping starts, one with the count when the backlog drains. Rate limits bound throughput, not the queue, so the cap is the bot's own |
 | Discord gateway | Member-list fetch at start-up fails or times out (120 s) | warn; leave announcements for members who joined before this start omit the duration |
 | Process | SIGTERM, SIGINT, uncaught exception or unhandled rejection | `registerShutdownHooks` routes all four to `StatusAnnouncer.shutdown`: errors are logged as fatal, the offline message is posted (only if the online one was), the gateway is closed, then the process exits - 0 for signals, 1 for errors - within 5 s (hard backstop at 5.5 s). These handlers replace Node's default crash on errors |
 | Process | SIGKILL, out of memory, host loss | Nothing can be posted; the next online message carries the unplanned-outage line |
