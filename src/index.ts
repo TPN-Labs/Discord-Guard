@@ -1,6 +1,13 @@
 import './lib/setup';
-import { LogLevel, SapphireClient } from '@sapphire/framework';
+import { container, LogLevel, SapphireClient } from '@sapphire/framework';
 import { GatewayIntentBits } from 'discord.js';
+import { envParseOptionalSnowflake } from './lib/env-parser';
+import { StatusAnnouncer } from './lib/status/announcer';
+import { StatusLifecycle } from './lib/status/lifecycle';
+import { registerShutdownHooks } from './lib/status/shutdown';
+
+// Parsed before anything else so a malformed value stops start-up with an [ENV] error.
+const statusChannelId = envParseOptionalSnowflake('STATUS_CHANNEL_ID');
 
 const client = new SapphireClient({
 	defaultPrefix: '!',
@@ -21,6 +28,13 @@ const client = new SapphireClient({
 		GatewayIntentBits.DirectMessages,
 		GatewayIntentBits.DirectMessageReactions
 	]
+});
+
+container.statusAnnouncer = new StatusAnnouncer({ channelId: statusChannelId, lifecycle: new StatusLifecycle(), logger: container.logger });
+
+// Posts the offline status message, closes the gateway and exits, within SHUTDOWN_DEADLINE_MS.
+registerShutdownHooks(process, (trigger, error) => {
+	void container.statusAnnouncer.shutdown(trigger, error, { client, exit: (code) => process.exit(code) });
 });
 
 const main = async () => {
