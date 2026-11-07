@@ -4,6 +4,7 @@ import { Type } from '@sapphire/type';
 import { codeBlock, isThenable } from '@sapphire/utilities';
 import { EmbedBuilder } from 'discord.js';
 import { inspect } from 'util';
+import { scrubEvalOutput } from '../../lib/eval-scrub';
 
 @ApplyOptions<CommandOptions>({
 	aliases: ['ev'],
@@ -17,10 +18,7 @@ export class EvalCommand extends Command {
 			text = inspect(text, {
 				depth: 1
 			});
-		return text
-			.replace(/`/g, '`' + String.fromCharCode(8203))
-			.replace(/@/g, '@' + String.fromCharCode(8203))
-			.replace(token, '<TOKEN>');
+		return scrubEvalOutput(text, token);
 	}
 
 	private async eval(interaction: Command.ChatInputCommandInteraction, code: string, flags: { depth: number; showHidden: boolean }) {
@@ -29,7 +27,7 @@ export class EvalCommand extends Command {
 
 		try {
 			result = await eval(code);
-			result = this.clean(interaction?.client?.token || '', result);
+			result = await this.clean(interaction?.client?.token || '', result);
 		} catch (error) {
 			if (error && error instanceof Error && error.stack) {
 				this.container.client.logger.error(error);
