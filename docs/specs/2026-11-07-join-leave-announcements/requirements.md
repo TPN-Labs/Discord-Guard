@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| Status | **Draft (Step 1)** - awaiting owner approval |
+| Status | **Approved (Step 1)** - 2026-11-07 |
 | Triage | Feature (0 → 1 → 2 → 4 → 5 → 6) - classified by the owner in session, 2026-11-07 |
 | Ticket | ENG-00 - no ticket |
 | Date | 2026-11-07 |
-| Next | `design.md` (Step 2), only after this document is approved |
+| Next | [`design.md`](design.md) (Step 2) |
 
 ## 1. Problem
 
@@ -155,9 +155,9 @@ Answered by the owner in session, 2026-11-07.
 
 - **Q1 - Ping the new member?** *Resolved: yes, ping.* The join announcement's message text mentions the new member and `allowedMentions` is limited to their ID (AC-02, AC-19). The draft recommended no ping. **Note for the verification feature:** once new members can see only the rules channel, Discord is not expected to notify a member about a mention in a channel they can't view, so the ping may stop reaching them then. Unverified here; check it at that feature's Step 5.
 - **Q2 - Announce bots?** *Resolved: skip bots* (AC-13).
-- **Q3 - Rules channel line.** *Resolved: add it.* The server already has a rules channel. The join announcement points to it through `RULES_CHANNEL_ID` (AC-05 to AC-07). The line's wording in §6.3 is a draft for the owner to confirm.
+- **Q3 - Rules channel line.** *Resolved: add it.* The server already has a rules channel. The join announcement points to it through `RULES_CHANNEL_ID` (AC-05 to AC-07). The line's wording in §6.3 was approved with this document.
 - **Q4 - Raids.** *Resolved: accept for now.* A raid of 200 joins posts 200 announcements; discord.js queues them under Discord's rate limits, so they arrive late but the bot holds no growing state of its own. The anti-spam feature is the place to detect raids and could pause announcements then.
 
 ## 10. Approval
 
-- [ ] Human approval of this document (Step 1), including the rules line in §6.3.
+- [x] Human approval of this document (Step 1). Approved by the owner in session, 2026-11-07, including the rules line in §6.3.
