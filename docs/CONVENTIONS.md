@@ -54,6 +54,7 @@ The complete exception list is: a different toolchain or runtime; a different tr
 | Rules channel / rules message | The channel a new member sees first, and the single bot-posted message in it that carries the ✅ reaction. |
 | Announcements channel | Where join and leave messages are posted. |
 | Moderation log channel | Where the bot records every automatic action (kicks) with its reason and evidence. |
+| Status channel / status message | The channel set by `STATUS_CHANNEL_ID`, and the green online or red offline embed the bot posts there when it starts or stops. |
 | Moderator | A member with a configured moderator role. Never checked by anti-spam. |
 | Owner | A user whose ID is in `OWNERS`. Can run owner-only commands, including `/eval`. |
 | Limit | An anti-spam rule: how many times an action may happen in an interval before the member is kicked. |

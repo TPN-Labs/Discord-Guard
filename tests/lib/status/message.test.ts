@@ -41,9 +41,9 @@ describe('buildStatusMessage', () => {
 	});
 
 	it('neverPutsTheOutageLineOnAnOfflineEmbed', () => {
-		expect(embedOf({ kind: 'offline', phrase: 'Măi animalule, cine a oprit serverul?', unplannedOutage: true, timestamp }).description).not.toContain(
-			UNPLANNED_OUTAGE_LINE
-		);
+		expect(
+			embedOf({ kind: 'offline', phrase: 'Măi animalule, cine a oprit serverul?', unplannedOutage: true, timestamp }).description
+		).not.toContain(UNPLANNED_OUTAGE_LINE);
 	});
 
 	it('mentionsNobodyWhateverThePhraseSays', () => {

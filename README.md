@@ -59,6 +59,16 @@ Each kick is logged in the moderation log channel with the reason and the offend
 
 The thresholds (how many messages, in how many seconds) are adjustable with the `/limits` command.
 
+### 🟢 Online and offline status messages
+
+The bot is called **Ion Iliescu**, and it announces its own comings and goings in a status channel, in character. When it starts it posts a green embed with one of five online phrases; when it is stopped it posts a red embed with one of five offline phrases. Moderators can tell at a glance when verification and anti-spam are down.
+
+-   A planned stop (a Coolify restart or redeploy, Ctrl+C) posts the offline message before the bot exits. Waiting for it never adds more than 5 seconds to a shutdown.
+-   A crash that kills the process outright can't post anything. The next online message then carries **"⚡ Revin după o pană de curent neprogramată."** so moderators know there was an outage.
+-   Status messages never ping anyone. Leave `STATUS_CHANNEL_ID` empty to turn them off, for example on a development bot.
+
+The phrases and the reasoning behind them are in [`docs/specs/2026-11-07-status-messages/`](docs/specs/2026-11-07-status-messages/requirements.md).
+
 ### 🧰 Other commands
 
 Slash commands for moderators and members. See [Commands](#commands).
@@ -75,6 +85,7 @@ Slash commands for moderators and members. See [Commands](#commands).
 | Join / leave announcements               | 🗓️ Planned   |
 | Anti-spam with automatic kick            | 🗓️ Planned   |
 | `/limits` (anti-spam thresholds)         | 🚧 Stub only |
+| Online / offline status messages         | 🧪 Built, awaiting test-server acceptance |
 | Persistent storage for settings          | 🗓️ Planned   |
 
 ---
@@ -100,10 +111,10 @@ Slash commands for moderators and members. See [Commands](#commands).
     | Permission           | Why                                             |
     | -------------------- | ----------------------------------------------- |
     | View Channels        | See the channels it works in                    |
-    | Send Messages        | Rules, announcements, command replies           |
-    | Embed Links          | Rich embeds for rules and logs                  |
+    | Send Messages        | Rules, announcements, status messages, command replies |
+    | Embed Links          | Rich embeds for rules, logs and status messages |
     | Add Reactions        | Add the ✅ under the rules message              |
-    | Read Message History | Find the existing rules message after a restart |
+    | Read Message History | Find the existing rules message after a restart; spot an unplanned outage from the status channel |
     | Manage Roles         | Give and remove the verified member role        |
     | Manage Messages      | Delete spam messages                            |
     | Kick Members         | Kick spammers                                   |
@@ -187,8 +198,9 @@ Settings live in `src/.env`. The file is ignored by git: never commit it.
 | `DISCORD_TOKEN` | Yes      | The bot token from the Developer Portal.                                                                                              |
 | `OWNERS`        | Yes      | Discord user IDs allowed to run owner-only commands, **separated by spaces**. Example: `OWNERS=123456789012345678 234567890123456789` |
 | `NODE_ENV`      | No       | `development` (default) or `production`. Changes the startup banner.                                                                  |
+| `STATUS_CHANNEL_ID` | No   | Channel ID for the online/offline status messages: a text or announcement channel. Empty turns them off (a warning is logged). A value that isn't a Discord ID (17-20 digits) stops start-up. |
 
-To copy a user ID, turn on **Developer Mode** in Discord (**User Settings → Advanced**), then right-click the user and choose **Copy User ID**.
+To copy a user or channel ID, turn on **Developer Mode** in Discord (**User Settings → Advanced**), then right-click the user or channel and choose **Copy User ID** / **Copy Channel ID**.
 
 Channel IDs, role IDs and anti-spam thresholds for the planned features will be added to this table as each feature lands.
 
@@ -219,13 +231,14 @@ src/
 ├── lib/
 │   ├── setup.ts           # Loads src/.env and registers Sapphire plugins
 │   ├── constants.ts
-│   ├── env-parser.ts      # Reads list values such as OWNERS
+│   ├── env-parser.ts      # Reads OWNERS and STATUS_CHANNEL_ID
+│   ├── status/            # Online/offline status messages: copy, decisions, shutdown hooks
 │   └── utils.ts
 ├── commands/
 │   ├── General/           # Commands for everyone (ping)
 │   ├── Development/       # Owner tools (eval, reload)
 │   └── Guardian/          # Moderation and anti-spam (limits)
-├── listeners/             # Gateway event handlers (ready, command errors, ...)
+├── listeners/             # Gateway event handlers (ready, statusOnline, command errors, ...)
 └── preconditions/         # Command checks (OwnerOnly)
 tests/                     # Vitest tests, mirroring src/ (e.g. tests/lib/env-parser.test.ts)
 ```

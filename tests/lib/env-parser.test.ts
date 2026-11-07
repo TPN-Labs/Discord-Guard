@@ -45,7 +45,9 @@ describe('envParseOptionalSnowflake', () => {
 		(value) => {
 			vi.stubEnv('STATUS_CHANNEL_ID', value);
 
-			expect(() => envParseOptionalSnowflake('STATUS_CHANNEL_ID')).toThrow('[ENV] STATUS_CHANNEL_ID - The key must be a Discord ID (17-20 digits).');
+			expect(() => envParseOptionalSnowflake('STATUS_CHANNEL_ID')).toThrow(
+				'[ENV] STATUS_CHANNEL_ID - The key must be a Discord ID (17-20 digits).'
+			);
 		}
 	);
 });

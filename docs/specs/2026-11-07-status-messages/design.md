@@ -323,6 +323,17 @@ In a test server with a separate bot application, never the live server:
 
 Screenshots (Constitution §3): this feature adds new messages, so there is no "before" frame. The PR carries cropped "after" shots of one online embed, one offline embed and one online embed with the ⚡ line, and states that no "before" frame exists.
 
-## 15. Approval
+## 15. Implementation notes (Step 4)
+
+Contract polish made during implementation. Behaviour is unchanged.
+
+- `withDeadline` returns `{ outcome: 'done' } | { outcome: 'failed'; error } | { outcome: 'timed-out' }` instead of a bare string, so a failure can be logged with its cause.
+- `resolveStatusChannel` takes a structural `StatusChannelClient` (`channels: Pick<ChannelManager, 'fetch'>`, `user: ClientUser`) instead of `Pick<Client<true>, 'channels' | 'user'>`. A real `Client<true>` still satisfies it, and test fakes stay small.
+- `StatusAnnouncer.shutdown(trigger, error, { client, exit })` takes its process dependencies as one `ShutdownContext` argument.
+- `StatusLifecycle.markOnlinePosted()` returns `boolean` (false once shutdown has started), so the announcer stores the channel only when the lifecycle actually reached `online`.
+- An offline-send failure is logged on its own, and the gateway close still runs inside the same deadline. `'failed'` from `withDeadline` therefore means the gateway close failed.
+- Red and green evidence, mutation checks and smoke runs are in [`validation-trail.md`](validation-trail.md).
+
+## 16. Approval
 
 - [x] Human approval of this document (Step 2). Approved by the owner in session, 2026-11-07, with the recommendations for D1-D3.
