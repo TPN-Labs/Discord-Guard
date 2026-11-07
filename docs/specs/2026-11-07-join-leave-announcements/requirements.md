@@ -20,7 +20,7 @@ The bot speaks as **Ion Iliescu**, a parody of the former Romanian president, in
 
 - Post a join announcement in one configured channel each time a member joins the server.
 - Post a leave announcement in the same channel each time a member leaves the server, for any reason.
-- Pick each announcement's phrase at random from a fixed list of ten join phrases and ten leave phrases (§6).
+- Use one fixed join phrase and one fixed leave phrase (§6).
 - Show, in the leave announcement, how long the member had been on the server, when the bot knows it.
 
 **Out of scope (non-goals)**
@@ -30,7 +30,7 @@ The bot speaks as **Ion Iliescu**, a parody of the former Romanian president, in
 - Pointing the newcomer to the rules channel. The rules channel and its ID don't exist yet; the verification feature adds that line when it lands (Q3).
 - Direct messages to the member, images, welcome cards, or role assignment on join.
 - Catching up on joins and leaves that happened while the bot was offline.
-- Changing the phrases at run time. They live in code and change through a PR, as the status phrases do.
+- Changing the phrases at run time, or rotating between several. They live in code and change through a PR, as the status phrases do.
 - Rate-limiting announcements during a raid (Q4).
 
 ## 3. Roles
@@ -50,15 +50,15 @@ Roles as defined in [`docs/CONVENTIONS.md §2`](../../CONVENTIONS.md#2-domain-vo
 ### Join announcement (US-01)
 
 - **AC-01** - When a member joins the server, the bot posts exactly one join announcement in the announcements channel.
-- **AC-02** - The join announcement is an embed with a green colour bar, the title `👋 Avem un tovarăș nou`, one phrase from the join list (§6.1) as its body with `{member}` replaced by a mention of the new member, the member's avatar as a thumbnail, and a timestamp.
-- **AC-03** - The join phrase is chosen at random from the join list, and every phrase on the list can be chosen.
+- **AC-02** - The join announcement is an embed with a green colour bar, the title `👋 Avem un tovarăș nou`, the join phrase (§6.1) as its body with `{member}` replaced by a mention of the new member, the member's avatar as a thumbnail, and a timestamp.
+- **AC-03** - Every join announcement uses the same phrase, §6.1, word for word apart from `{member}`.
 - **AC-04** - A member who leaves and joins again gets a new join announcement each time (see §2, "First time only").
 
 ### Leave announcement (US-02)
 
 - **AC-05** - When a member leaves the server - by leaving, being kicked, or being banned - the bot posts exactly one leave announcement in the announcements channel.
-- **AC-06** - The leave announcement is an embed with a grey colour bar, the title `🚪 Un tovarăș ne-a părăsit`, one phrase from the leave list (§6.2) as its body with `{name}` replaced by the member's name (AC-15), and a timestamp.
-- **AC-07** - The leave phrase is chosen at random from the leave list, and every phrase on the list can be chosen.
+- **AC-06** - The leave announcement is an embed with a grey colour bar, the title `🚪 Un tovarăș ne-a părăsit`, the leave phrase (§6.2) as its body with `{name}` replaced by the member's name (AC-15), and a timestamp.
+- **AC-07** - Every leave announcement uses the same phrase, §6.2, word for word apart from `{name}`.
 - **AC-08** - When the bot knows when the member joined, the leave announcement also contains the line `⏳ A stat cu noi <duration>.`, with the duration written as in §6.4.
 - **AC-09** - A member who joined before the bot's last restart still gets a leave announcement. If the bot doesn't know when that member joined, the announcement leaves out the duration line rather than showing a wrong or empty one.
 
@@ -79,37 +79,19 @@ Roles as defined in [`docs/CONVENTIONS.md §2`](../../CONVENTIONS.md#2-domain-vo
 - **AC-16** - Announcements ping nobody. The join mention shows the new member's name but sends them no notification, and no announcement ever pings `@everyone`, `@here`, a role or a member, whatever a name or phrase contains (Q1).
 - **AC-17** - No log line, announcement or error produced by this feature contains the bot token or any value from `src/.env` other than `ANNOUNCEMENTS_CHANNEL_ID`.
 
-## 6. Draft copy
+## 6. Copy
 
-**Drafted 2026-11-07 for owner review - not yet approved.** Romanian, with comma-below diacritics (ș, ț), not cedilla forms (ş, ţ). Each join phrase contains `{member}` exactly once and each leave phrase contains `{name}` exactly once. Once approved, tests compare against this copy exactly.
+**Chosen by the owner on 2026-11-07** from ten drafts per list. Romanian, with comma-below diacritics (ș, ț), not cedilla forms (ş, ţ). The join phrase contains `{member}` exactly once and the leave phrase contains `{name}` exactly once. Tests compare against this copy exactly.
 
 The status-messages content note applies here too: no phrase is about the June 1990 Mineriad or the deaths of December 1989.
 
-### 6.1 Join phrases
+### 6.1 Join phrase
 
-1. Măi {member}, bine ai venit! Ia loc, nu e coadă. Încă.
-2. {member} s-a emanat pe server. Revoluția continuă!
-3. Fraților, avem un membru nou: {member}! Noi nu ne vindem serverul!
-4. Bine ai venit, {member}! Ți-am făcut cartelă: o pâine pe zi și emoji-uri la discreție.
-5. {member} a intrat pe server ca un loz în plic: nu știm ce iese, dar sperăm.
-6. Ultima oră la Telejurnal: {member} e membru nou. Urmează două ore despre recoltă.
-7. Salut, {member}! Te-am trecut în FSN... adică în lista de membri. Scuze, reflex.
-8. {member} a venit cu Dacia 1300 și a parcat pe server. Bine ai venit, tovarășe!
-9. Bine ai venit, {member}! Aici e mai cald decât într-un bloc din '87.
-10. {member}, ai ajuns la noi! Ia o gumă Turbo și citește regulile.
+> Ultima oră la Telejurnal: {member} e membru nou. Urmează două ore despre recoltă.
 
-### 6.2 Leave phrases
+### 6.2 Leave phrase
 
-1. {name} a plecat. Măi animalule, unde fugi?
-2. {name} a sărit gardul ambasadei. Drum bun în Occident!
-3. {name} a ieșit din partid. Adică de pe server. Tot aia.
-4. {name} s-a privatizat și a plecat. Bine măcar că n-a luat și mobila.
-5. {name} n-a mai rezistat la coadă și a plecat acasă.
-6. {name} a plecat cu ultimul tren CFR. Ajunge mâine, dacă nu se strică locomotiva.
-7. {name} a schimbat canalul pe Dallas. Nu-l condamnăm.
-8. Pa, {name}! Lasă cheia la administratorul blocului.
-9. {name} a dispărut ca apa caldă după ora 22.
-10. {name} a plecat la căpșuni în Spania. Trimite-ne o vedere!
+> {name} a sărit gardul ambasadei. Drum bun în Occident!
 
 ### 6.3 Fixed strings
 
@@ -147,8 +129,7 @@ Measured in a test server with a separate bot application during Step 5 acceptan
 | M-03 | Leaves of a member who joined before the bot's last restart that produce a leave announcement | 2 of 2 |
 | M-04 | Time from the join or leave to the announcement appearing | ≤ 5 s |
 | M-05 | Notifications received by anyone (including the new member) from an announcement, using a member named `@everyone` | 0 |
-| M-06 | Phrases never chosen across 1,000 picks per list with a real random source (Vitest) | 0 of 20 |
-| M-07 | Duration examples in §6.4 rendered exactly (Vitest) | 8 of 8 |
+| M-06 | Duration examples in §6.4 rendered exactly (Vitest) | 8 of 8 |
 
 ## 8. Permissions and configuration impact
 
@@ -162,8 +143,8 @@ Measured in a test server with a separate bot application during Step 5 acceptan
 Each has a recommendation; approving this document without comment takes all four.
 
 - **Q1 - Ping the new member?** AC-16 says no: the join mention renders the member's name but sends no notification, matching the status messages, which ping nobody. Pinging only the new member is possible (`allowedMentions` limited to their ID) and some servers do it. Once rules verification lands, a new member sees only the rules channel and won't see the announcements channel anyway, so a ping would point them at a message they can't open. **Recommendation: no ping.**
-- **Q2 - Announce bots?** AC-10 skips bot accounts. Bots are added by owners, who already know. **Recommendation: skip bots.** The alternative is to announce them with the same phrases, which read oddly for a bot.
-- **Q3 - Rules channel line.** The README's roadmap says the welcome "points them to the rules channel". There is no rules channel yet, and per Q1 the newcomer won't see the announcement once verification lands. **Recommendation: leave it out (§2) and update the README's feature description to match.** Join phrase 10 already says `citește regulile` in voice.
+- **Q2 - Announce bots?** AC-10 skips bot accounts. Bots are added by owners, who already know. **Recommendation: skip bots.** The alternative is to announce them with the same phrase, which reads oddly for a bot.
+- **Q3 - Rules channel line.** The README's roadmap says the welcome "points them to the rules channel". There is no rules channel yet, and per Q1 the newcomer won't see the announcement once verification lands. **Recommendation: leave it out (§2) and update the README's feature description to match.**
 - **Q4 - Raids.** A raid of 200 joins posts 200 announcements; discord.js queues them under Discord's rate limits, so they arrive late but the bot holds no growing state of its own. **Recommendation: accept for now**, as status-messages Q2 did for crash loops. The anti-spam feature is the place to detect raids and could pause announcements then.
 
 ## 10. Approval
