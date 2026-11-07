@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { envParseArray } from '../../src/lib/env-parser';
+import { envParseArray, envParseOptionalSnowflake } from '../../src/lib/env-parser';
 
 describe('envParseArray', () => {
 	it('splitsSpaceSeparatedOwnerIdsIntoAList', () => {
@@ -19,4 +19,33 @@ describe('envParseArray', () => {
 
 		expect(() => envParseArray('OWNERS')).toThrow('[ENV] OWNERS');
 	});
+});
+
+describe('envParseOptionalSnowflake', () => {
+	it('returnsNullWhenTheVariableIsUnset', () => {
+		vi.stubEnv('STATUS_CHANNEL_ID', undefined);
+
+		expect(envParseOptionalSnowflake('STATUS_CHANNEL_ID')).toBeNull();
+	});
+
+	it('returnsNullWhenTheVariableIsBlank', () => {
+		vi.stubEnv('STATUS_CHANNEL_ID', '   ');
+
+		expect(envParseOptionalSnowflake('STATUS_CHANNEL_ID')).toBeNull();
+	});
+
+	it('returnsTheTrimmedIdWhenItIsADiscordId', () => {
+		vi.stubEnv('STATUS_CHANNEL_ID', ' 123456789012345678 ');
+
+		expect(envParseOptionalSnowflake('STATUS_CHANNEL_ID')).toBe('123456789012345678');
+	});
+
+	it.each(['abc', '1234567890123456', '123456789012345678901', '123456789012345678 234567890123456789', '<#123456789012345678>'])(
+		'refusesToStartWhenTheValueIsNotADiscordId (%s)',
+		(value) => {
+			vi.stubEnv('STATUS_CHANNEL_ID', value);
+
+			expect(() => envParseOptionalSnowflake('STATUS_CHANNEL_ID')).toThrow('[ENV] STATUS_CHANNEL_ID - The key must be a Discord ID (17-20 digits).');
+		}
+	);
 });

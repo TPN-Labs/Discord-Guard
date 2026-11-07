@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Draft - awaiting human approval (Step 2)** |
+| Status | **Approved (Step 2)** - 2026-11-07 |
 | Triage | Feature (0 → 1 → 2 → 4 → 5 → 6) |
 | Requirements | [`requirements.md`](requirements.md) (approved 2026-11-07) |
 | Ticket | ENG-00 - no ticket |
@@ -325,4 +325,4 @@ Screenshots (Constitution §3): this feature adds new messages, so there is no "
 
 ## 15. Approval
 
-- [ ] Human approval of this document (Step 2). Approver and date:
+- [x] Human approval of this document (Step 2). Approved by the owner in session, 2026-11-07, with the recommendations for D1-D3.
