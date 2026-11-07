@@ -112,6 +112,12 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
+      # Unit tests (Vitest) run as a step here rather than as their own job or matrix leg:
+      # Constitution §4.VII prefers a step in an existing job, which reuses this checkout
+      # and install. A red test fails the required "ci / Build & Verify" check.
+      - name: Test
+        run: yarn test
+
       - name: Build
         run: yarn build
 

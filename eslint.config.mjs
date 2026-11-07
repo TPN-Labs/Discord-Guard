@@ -11,7 +11,7 @@ export default tseslint.config(
 	eslint.configs.recommended,
 	...tseslint.configs.recommended,
 	{
-		files: ['src/**/*.ts'],
+		files: ['src/**/*.ts', 'tests/**/*.ts'],
 		languageOptions: {
 			globals: globals.node
 		},
