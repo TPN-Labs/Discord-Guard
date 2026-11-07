@@ -42,17 +42,27 @@ function addMonthsClamped(date: Date, months: number): Date {
 	return target;
 }
 
+/** How many whole steps of `stepMonths` fit between `from` and `to`. */
+function wholeMonthsBetween(from: Date, to: Date, stepMonths: number): number {
+	let steps = Math.floor(((to.getUTCFullYear() - from.getUTCFullYear()) * 12 + (to.getUTCMonth() - from.getUTCMonth())) / stepMonths);
+	while (steps > 0 && addMonthsClamped(from, steps * stepMonths) > to) steps--;
+	return Math.max(steps, 0);
+}
+
 /** The largest non-zero unit, plus the next smaller unit when it is non-zero. */
 export function formatDuration(from: Date, to: Date): string {
 	if (to.getTime() - from.getTime() < MINUTE_MS) return 'mai puțin de un minut';
 
-	let totalMonths = (to.getUTCFullYear() - from.getUTCFullYear()) * 12 + (to.getUTCMonth() - from.getUTCMonth());
-	while (totalMonths > 0 && addMonthsClamped(from, totalMonths) > to) totalMonths--;
+	// Whole years from the join date first, then whole months from that anchor (design §5.5): a leap-day join
+	// clamps to 28 February once, and the months after it count from there.
+	const years = wholeMonthsBetween(from, to, 12);
+	const afterYears = addMonthsClamped(from, years * 12);
+	const months = wholeMonthsBetween(afterYears, to, 1);
 
-	const rest = to.getTime() - addMonthsClamped(from, totalMonths).getTime();
+	const rest = to.getTime() - addMonthsClamped(afterYears, months).getTime();
 	const parts: [DurationUnit, number][] = [
-		['year', Math.floor(totalMonths / 12)],
-		['month', totalMonths % 12],
+		['year', years],
+		['month', months],
 		['day', Math.floor(rest / DAY_MS)],
 		['hour', Math.floor((rest % DAY_MS) / HOUR_MS)],
 		['minute', Math.floor((rest % HOUR_MS) / MINUTE_MS)]

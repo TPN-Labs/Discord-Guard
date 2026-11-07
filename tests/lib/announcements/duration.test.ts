@@ -65,6 +65,10 @@ describe('formatDuration', () => {
 		expect(formatDuration(utc('2026-01-31T00:00:00'), utc('2026-02-28T00:00:00'))).toBe('o lună');
 	});
 
+	it('countsWholeYearsBeforeWholeMonthsFromALeapDay', () => {
+		expect(formatDuration(utc('2024-02-29T00:00:00'), utc('2025-03-28T00:00:00'))).toBe('un an și o lună');
+	});
+
 	it('doesNotCountAMonthThatHasNotEnded', () => {
 		expect(formatDuration(utc('2026-01-15T12:00:00'), utc('2026-02-15T11:00:00'))).toBe('30 de zile și 23 de ore');
 	});
