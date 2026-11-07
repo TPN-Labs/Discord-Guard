@@ -50,14 +50,14 @@ Roles as defined in [`docs/CONVENTIONS.md §2`](../../CONVENTIONS.md#2-domain-vo
 ### Join announcement (US-01)
 
 - **AC-01** - When a member joins the server, the bot posts exactly one join announcement in the announcements channel.
-- **AC-02** - The join announcement is an embed with a green colour bar, the title `👋 Avem un cetățean nou`, one phrase from the join list (§6.1) as its body with `{member}` replaced by a mention of the new member, the member's avatar as a thumbnail, and a timestamp.
+- **AC-02** - The join announcement is an embed with a green colour bar, the title `👋 Avem un tovarăș nou`, one phrase from the join list (§6.1) as its body with `{member}` replaced by a mention of the new member, the member's avatar as a thumbnail, and a timestamp.
 - **AC-03** - The join phrase is chosen at random from the join list, and every phrase on the list can be chosen.
 - **AC-04** - A member who leaves and joins again gets a new join announcement each time (see §2, "First time only").
 
 ### Leave announcement (US-02)
 
 - **AC-05** - When a member leaves the server - by leaving, being kicked, or being banned - the bot posts exactly one leave announcement in the announcements channel.
-- **AC-06** - The leave announcement is an embed with a grey colour bar, the title `🚪 Un cetățean ne-a părăsit`, one phrase from the leave list (§6.2) as its body with `{name}` replaced by the member's name (AC-15), and a timestamp.
+- **AC-06** - The leave announcement is an embed with a grey colour bar, the title `🚪 Un tovarăș ne-a părăsit`, one phrase from the leave list (§6.2) as its body with `{name}` replaced by the member's name (AC-15), and a timestamp.
 - **AC-07** - The leave phrase is chosen at random from the leave list, and every phrase on the list can be chosen.
 - **AC-08** - When the bot knows when the member joined, the leave announcement also contains the line `⏳ A stat cu noi <duration>.`, with the duration written as in §6.4.
 - **AC-09** - A member who joined before the bot's last restart still gets a leave announcement. If the bot doesn't know when that member joined, the announcement leaves out the duration line rather than showing a wrong or empty one.
@@ -115,8 +115,8 @@ The status-messages content note applies here too: no phrase is about the June 1
 
 | Where | Text |
 |---|---|
-| Join title | `👋 Avem un cetățean nou` |
-| Leave title | `🚪 Un cetățean ne-a părăsit` |
+| Join title | `👋 Avem un tovarăș nou` |
+| Leave title | `🚪 Un tovarăș ne-a părăsit` |
 | Leave duration line | `⏳ A stat cu noi <duration>.` |
 
 ### 6.4 Duration wording
