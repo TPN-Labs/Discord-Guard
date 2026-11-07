@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| Status | **Draft - awaiting human approval (Step 1)** |
+| Status | **Approved (Step 1)** - 2026-11-07 |
 | Triage | Feature (0 → 1 → 2 → 4 → 5 → 6) |
 | Ticket | ENG-00 - no ticket |
 | Date | 2026-11-07 |
-| Next | `design.md` (Step 2), only after this document is approved |
+| Next | [`design.md`](design.md) (Step 2) |
 
 ## 1. Problem
 
@@ -73,7 +73,7 @@ Roles as defined in [`docs/CONVENTIONS.md §2`](../../CONVENTIONS.md#2-domain-vo
 ### Configuration and failure modes (US-04, US-05)
 
 - **AC-15** - When `STATUS_CHANNEL_ID` is unset or empty, the bot posts no status messages, logs one warning at start-up saying status messages are off, and otherwise starts and runs normally.
-- **AC-16** - When `STATUS_CHANNEL_ID` is set to a value that is not a Discord ID (not 17-20 digits), start-up stops with an `[ENV] STATUS_CHANNEL_ID - ...` error, the same way a missing `OWNERS` does. *(Open question Q1.)*
+- **AC-16** - When `STATUS_CHANNEL_ID` is set to a value that is not a Discord ID (not 17-20 digits), start-up stops with an `[ENV] STATUS_CHANNEL_ID - ...` error, the same way a missing `OWNERS` does. *(Q1, resolved.)*
 - **AC-17** - When `STATUS_CHANNEL_ID` names a channel that doesn't exist, that the bot can't see, or that can't hold text messages (for example, a voice channel or a category), the bot logs an error naming the channel ID and the reason, posts nothing, and keeps running. Other features and commands are unaffected.
 - **AC-18** - When the bot lacks **Send Messages** or **Embed Links** in the status channel, the bot logs an error naming the channel ID and the missing permission, and keeps running.
 - **AC-19** - Status messages mention nobody: they never ping `@everyone`, `@here`, a role or a member, whatever the phrase text says.
@@ -129,12 +129,14 @@ Measured in a test server with a separate bot application during Step 5 acceptan
 - **Bot permissions in the status channel:** View Channels, Send Messages, Embed Links, Read Message History. All four are already in the README's permission table; their "Why" text gets status messages added.
 - **Intents:** no new intent expected. `Guilds` is already requested; Step 2 confirms it is enough for reading channel history.
 
-## 9. Open questions
+## 9. Resolved questions
 
-- **Q1 - Malformed `STATUS_CHANNEL_ID`.** [`docs/TESTING.md §7`](../../TESTING.md#7-failure-path-floor) says bad configuration fails loudly at start-up. The option chosen during clarification said an invalid channel logs a warning and the bot keeps running. AC-16 and AC-17 split the two cases: a value that can't be an ID stops start-up (detectable before login, almost always a typo), while a well-formed ID for an unreachable channel logs an error and the bot keeps running. **Recommendation: keep the split.** The alternative is to log and carry on in both cases.
-- **Q2 - Crash loops.** If the bot crashes right after start-up and Coolify restarts it over and over, every start posts an online message, each with the unplanned-outage line. **Recommendation: accept this for now.** The flood is itself a visible signal, and capping it would need state this feature doesn't keep. Revisit if it happens.
-- **Q3 - Fixed name in the titles.** The titles say `Ion Iliescu` even when a test bot with another name posts them. **Recommendation: keep it fixed.** The phrases are written in Iliescu's voice anyway, and the copy stays identical across environments.
+All three were resolved on approval (2026-11-07) by taking the recommendation.
+
+- **Q1 - Malformed `STATUS_CHANNEL_ID`.** *Resolved: keep the split (AC-16 and AC-17 as written).* [`docs/TESTING.md §7`](../../TESTING.md#7-failure-path-floor) says bad configuration fails loudly at start-up. The option chosen during clarification said an invalid channel logs a warning and the bot keeps running. AC-16 and AC-17 split the two cases: a value that can't be an ID stops start-up (detectable before login, almost always a typo), while a well-formed ID for an unreachable channel logs an error and the bot keeps running. **Recommendation: keep the split.** The alternative is to log and carry on in both cases.
+- **Q2 - Crash loops.** *Resolved: accept.* If the bot crashes right after start-up and Coolify restarts it over and over, every start posts an online message, each with the unplanned-outage line. **Recommendation: accept this for now.** The flood is itself a visible signal, and capping it would need state this feature doesn't keep. Revisit if it happens.
+- **Q3 - Fixed name in the titles.** *Resolved: keep it fixed.* The titles say `Ion Iliescu` even when a test bot with another name posts them. **Recommendation: keep it fixed.** The phrases are written in Iliescu's voice anyway, and the copy stays identical across environments.
 
 ## 10. Approval
 
-- [ ] Human approval of this document (Step 1). Approver and date:
+- [x] Human approval of this document (Step 1). Approved by the owner in session, 2026-11-07, with the recommendations for Q1-Q3.
