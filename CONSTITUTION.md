@@ -14,7 +14,7 @@
 |---|---|---|---|
 | Bot | Verification, announcements, anti-spam, moderator commands | TypeScript, discord.js v14, Sapphire framework v5 | Server members, moderators, owners |
 | Testing | Unit and behaviour tests for bot logic | Vitest | All domains |
-| Infrastructure & Tooling | CI, dependency updates, release | GitHub Actions (GitHub-hosted runners), Dependabot, Yarn 4 | All domains |
+| Infrastructure & Tooling | CI, dependency updates, deployment | GitHub Actions (GitHub-hosted runners), Dependabot, Yarn 4, Coolify (Nixpacks) | All domains |
 
 > **AI domain constraint:** Must not default to LLM training data when project context is available. All AI reasoning must be grounded in current local artefacts - this repository's code, its docs, and the installed package versions in `yarn.lock` - not in remembered discord.js or Sapphire APIs from an older major version.
 

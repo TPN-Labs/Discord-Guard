@@ -47,7 +47,7 @@ Rule of thumb: pieces adapt Discord to plain functions in `src/lib/`; decisions 
 
 ## 5. Configuration and secrets
 
-All configuration is environment variables loaded from `src/.env` (gitignored). Today: `DISCORD_TOKEN`, `OWNERS` (space-separated user IDs), `NODE_ENV`. Planned features add channel IDs, role IDs and thresholds; each lands in the README's Configuration table in the same PR.
+All configuration is environment variables: from `src/.env` (gitignored) when run locally, from Coolify's runtime variables when deployed. Variables already set in the process environment win over `src/.env`. Today: `DISCORD_TOKEN`, `OWNERS` (space-separated user IDs), `NODE_ENV`. Planned features add channel IDs, role IDs and thresholds; each lands in the README's Configuration table in the same PR.
 
 The token grants full control of the bot. It never appears in logs, replies, tests or docs. `/eval` is owner-only and replaces the token in its output with `<TOKEN>` - today only the first occurrence, because it uses `String.replace` with a string pattern; that gap is a known defect, not the intended behaviour.
 
@@ -83,4 +83,4 @@ From the README roadmap; where each is expected to land:
 
 - **CI** - `.github/workflows/ci.yml` (lint, types, Prettier; then test, build and verify `dist/`) and `.github/workflows/semantic_pr.yml` (PR title), on GitHub-hosted runners because the repository is public (Constitution §4.VII).
 - **Dependencies** - Dependabot, weekly, with a 5-day cooldown, grouping `@sapphire/*` and discord.js packages.
-- **Deployment** - not automated. The bot is run by hand with `yarn build` and `yarn start`.
+- **Deployment** - Coolify, with the Nixpacks build pack. `nixpacks.toml` pins Node 22 (nixos-26.05), adds the Python/C++ toolchain that `@sapphire/type` needs to compile, installs with `yarn install --immutable`, builds with `yarn build` and starts with `node dist/index.js`. Secrets come from Coolify's runtime environment variables, not `src/.env`. Steps are in the README's "Deploying with Coolify" section.
