@@ -98,3 +98,9 @@ Per [`CONSTITUTION.md §4.VI`](./CONSTITUTION.md#vi-session-isolation--work-dura
 ## Linear tickets
 
 No Linear project tracks this repository yet. Use `ENG-00` in branch names and PR titles for untracked work, as the history does. Before creating a ticket, ask the user which project it belongs to; do not default to another repository's project.
+
+## PR titles
+
+The PR title format is in [`CONSTITUTION.md §3`](./CONSTITUTION.md#git--pr-conventions): `<type>(<linear-ticket-number>): <summary>`, for example `docs(ENG-00): document OWNERS as space-separated`. The required `title / Validate PR title` check fails anything without a `<type>` prefix.
+
+A PR opened from the Claude Code UI gets a generated title that does not follow this format. After any PR is opened for your branch, read its title and fix it before reporting the PR as ready.
