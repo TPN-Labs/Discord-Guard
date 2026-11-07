@@ -21,13 +21,14 @@ The bot speaks as **Ion Iliescu**, a parody of the former Romanian president, in
 - Post a join announcement in one configured channel each time a member joins the server.
 - Post a leave announcement in the same channel each time a member leaves the server, for any reason.
 - Use one fixed join phrase and one fixed leave phrase (§6).
+- Ping the new member in their join announcement, and point them to the server's rules channel when it is configured.
 - Show, in the leave announcement, how long the member had been on the server, when the bot knows it.
 
 **Out of scope (non-goals)**
 
 - **"First time only."** The bot keeps no storage, so it cannot tell a first join from a rejoin. Every join is announced, including a member who left and came back. A first-time-only welcome needs persistent storage (Constitution §6, open item 3) and is a separate feature.
 - Telling apart a member who left, was kicked, or was banned. Discord reports all three as the same event; telling them apart needs audit-log reads and the **View Audit Log** permission. The same leave announcement is posted for all three.
-- Pointing the newcomer to the rules channel. The rules channel and its ID don't exist yet; the verification feature adds that line when it lands (Q3).
+- Checking that the rules channel exists, or posting the rules. The rules message and ✅ verification are a separate planned feature, which will reuse `RULES_CHANNEL_ID`.
 - Direct messages to the member, images, welcome cards, or role assignment on join.
 - Catching up on joins and leaves that happened while the bot was offline.
 - Changing the phrases at run time, or rotating between several. They live in code and change through a PR, as the status phrases do.
@@ -43,41 +44,48 @@ Roles as defined in [`docs/CONVENTIONS.md §2`](../../CONVENTIONS.md#2-domain-vo
 - **US-02** - As a **moderator**, I want to see when someone leaves and how long they had been on the server, so I can notice a regular leaving or a burst of short stays.
 - **US-03** - As an **owner**, I want to turn announcements on for production and leave them off for a development bot without changing code, so test runs don't post to the live server.
 - **US-04** - As an **owner**, I want a broken announcements channel (deleted, no permission) to show up in the logs without taking the bot down, so a cosmetic feature can't stop verification or anti-spam.
-- **US-05** - As a **moderator**, I want a member's name never to ping anyone or break the message's formatting, so a crafted username can't turn the announcement into a mass ping.
+- **US-05** - As a **moderator**, I want a member's name never to ping anyone else or break the message's formatting, so a crafted username can't turn the announcement into a mass ping.
+- **US-06** - As a **new member**, I want to be pinged when I arrive and pointed to the rules channel, so I know I'm in and where to start.
 
 ## 5. Acceptance criteria
 
-### Join announcement (US-01)
+### Join announcement (US-01, US-06)
 
 - **AC-01** - When a member joins the server, the bot posts exactly one join announcement in the announcements channel.
-- **AC-02** - The join announcement is an embed with a green colour bar, the title `👋 Avem un tovarăș nou`, the join phrase (§6.1) as its body with `{member}` replaced by a mention of the new member, the member's avatar as a thumbnail, and a timestamp.
+- **AC-02** - The join announcement's message text is a mention of the new member, so Discord notifies them (AC-19). Under it is an embed with a green colour bar, the title `👋 Avem un tovarăș nou`, the join phrase (§6.1) as its body with `{member}` replaced by a mention of the new member, the rules line when configured (AC-05), the member's avatar as a thumbnail, and a timestamp.
 - **AC-03** - Every join announcement uses the same phrase, §6.1, word for word apart from `{member}`.
 - **AC-04** - A member who leaves and joins again gets a new join announcement each time (see §2, "First time only").
 
+### Rules channel line (US-06)
+
+- **AC-05** - When `RULES_CHANNEL_ID` is set, the join embed ends with the line `📜 Regulile sunt în <#RULES_CHANNEL_ID>. Citește-le, tovarășe!`, which Discord shows as a clickable link to the rules channel.
+- **AC-06** - When `RULES_CHANNEL_ID` is unset or empty, the join announcement leaves the rules line out and is otherwise unchanged.
+- **AC-07** - When `RULES_CHANNEL_ID` is set to a value that is not a Discord ID (not 17-20 digits), start-up stops with an `[ENV] RULES_CHANNEL_ID - ...` error.
+
 ### Leave announcement (US-02)
 
-- **AC-05** - When a member leaves the server - by leaving, being kicked, or being banned - the bot posts exactly one leave announcement in the announcements channel.
-- **AC-06** - The leave announcement is an embed with a grey colour bar, the title `🚪 Un tovarăș ne-a părăsit`, the leave phrase (§6.2) as its body with `{name}` replaced by the member's name (AC-15), and a timestamp.
-- **AC-07** - Every leave announcement uses the same phrase, §6.2, word for word apart from `{name}`.
-- **AC-08** - When the bot knows when the member joined, the leave announcement also contains the line `⏳ A stat cu noi <duration>.`, with the duration written as in §6.4.
-- **AC-09** - A member who joined before the bot's last restart still gets a leave announcement. If the bot doesn't know when that member joined, the announcement leaves out the duration line rather than showing a wrong or empty one.
+- **AC-08** - When a member leaves the server - by leaving, being kicked, or being banned - the bot posts exactly one leave announcement in the announcements channel.
+- **AC-09** - The leave announcement is an embed with a grey colour bar, the title `🚪 Un tovarăș ne-a părăsit`, the leave phrase (§6.2) as its body with `{name}` replaced by the member's name (AC-18), and a timestamp. It has no message text and pings nobody.
+- **AC-10** - Every leave announcement uses the same phrase, §6.2, word for word apart from `{name}`.
+- **AC-11** - When the bot knows when the member joined, the leave announcement also contains the line `⏳ A stat cu noi <duration>.`, with the duration written as in §6.4.
+- **AC-12** - A member who joined before the bot's last restart still gets a leave announcement. If the bot doesn't know when that member joined, the announcement leaves out the duration line rather than showing a wrong or empty one.
 
 ### Who is announced
 
-- **AC-10** - Joins and leaves of **bot accounts** are not announced (Q2).
-- **AC-11** - Only joins and leaves in the server that owns the announcements channel are announced. If the bot is in another server, that server's joins and leaves are ignored.
+- **AC-13** - Joins and leaves of **bot accounts** are not announced (Q2).
+- **AC-14** - Only joins and leaves in the server that owns the announcements channel are announced. If the bot is in another server, that server's joins and leaves are ignored.
 
 ### Configuration and failure modes (US-03, US-04)
 
-- **AC-12** - When `ANNOUNCEMENTS_CHANNEL_ID` is unset or empty, the bot posts no announcements, logs one warning at start-up saying join and leave announcements are off, and otherwise starts and runs normally.
-- **AC-13** - When `ANNOUNCEMENTS_CHANNEL_ID` is set to a value that is not a Discord ID (not 17-20 digits), start-up stops with an `[ENV] ANNOUNCEMENTS_CHANNEL_ID - ...` error, the same way a malformed `STATUS_CHANNEL_ID` does.
-- **AC-14** - When `ANNOUNCEMENTS_CHANNEL_ID` names a channel that doesn't exist, that the bot can't see, or that can't hold text messages, or when the bot lacks **Send Messages** or **Embed Links** there, an announcement that can't be posted is not retried. The bot logs an error naming the channel ID, the reason, and the member's ID, and keeps running. Other features and commands are unaffected.
+- **AC-15** - When `ANNOUNCEMENTS_CHANNEL_ID` is unset or empty, the bot posts no announcements, logs one warning at start-up saying join and leave announcements are off, and otherwise starts and runs normally.
+- **AC-16** - When `ANNOUNCEMENTS_CHANNEL_ID` is set to a value that is not a Discord ID (not 17-20 digits), start-up stops with an `[ENV] ANNOUNCEMENTS_CHANNEL_ID - ...` error, the same way a malformed `STATUS_CHANNEL_ID` does.
+- **AC-17** - When `ANNOUNCEMENTS_CHANNEL_ID` names a channel that doesn't exist, that the bot can't see, or that can't hold text messages, or when the bot lacks **Send Messages** or **Embed Links** there, an announcement that can't be posted is not retried. The bot logs an error naming the channel ID, the reason, and the member's ID, and keeps running. Other features and commands are unaffected.
 
-### Names and mentions (US-05)
+### Names and mentions (US-05, US-06)
 
-- **AC-15** - In the leave announcement, the member's name is their server display name in bold, followed by their username in brackets when the two differ: `**Ion** (ion1930)`. Markdown characters in either are escaped, so the name shows exactly as written.
-- **AC-16** - Announcements ping nobody. The join mention shows the new member's name but sends them no notification, and no announcement ever pings `@everyone`, `@here`, a role or a member, whatever a name or phrase contains (Q1).
-- **AC-17** - No log line, announcement or error produced by this feature contains the bot token or any value from `src/.env` other than `ANNOUNCEMENTS_CHANNEL_ID`.
+- **AC-18** - In the leave announcement, the member's name is their server display name in bold, followed by their username in brackets when the two differ: `**Ion** (ion1930)`. Markdown characters in either are escaped, so the name shows exactly as written.
+- **AC-19** - The join announcement pings exactly one person: the new member. No announcement ever pings `@everyone`, `@here`, a role, or any other member, whatever a name or phrase contains (Q1).
+- **AC-20** - No log line, announcement or error produced by this feature contains the bot token or any value from `src/.env` other than `ANNOUNCEMENTS_CHANNEL_ID` and `RULES_CHANNEL_ID`.
 
 ## 6. Copy
 
@@ -98,6 +106,7 @@ The status-messages content note applies here too: no phrase is about the June 1
 | Where | Text |
 |---|---|
 | Join title | `👋 Avem un tovarăș nou` |
+| Rules line | `📜 Regulile sunt în <#RULES_CHANNEL_ID>. Citește-le, tovarășe!` |
 | Leave title | `🚪 Un tovarăș ne-a părăsit` |
 | Leave duration line | `⏳ A stat cu noi <duration>.` |
 
@@ -128,25 +137,27 @@ Measured in a test server with a separate bot application during Step 5 acceptan
 | M-02 | Leaves, kicks and bans of test accounts that produce exactly one leave announcement | 3 of 3 each |
 | M-03 | Leaves of a member who joined before the bot's last restart that produce a leave announcement | 2 of 2 |
 | M-04 | Time from the join or leave to the announcement appearing | ≤ 5 s |
-| M-05 | Notifications received by anyone (including the new member) from an announcement, using a member named `@everyone` | 0 |
-| M-06 | Duration examples in §6.4 rendered exactly (Vitest) | 8 of 8 |
+| M-05 | People other than the new member notified by an announcement, with a test member whose display name is `@everyone` | 0 |
+| M-06 | New members notified by their own join announcement | 5 of 5 |
+| M-07 | Join announcements whose rules line opens the rules channel when clicked | 5 of 5 |
+| M-08 | Duration examples in §6.4 rendered exactly (Vitest) | 8 of 8 |
 
 ## 8. Permissions and configuration impact
 
-- **New environment variable:** `ANNOUNCEMENTS_CHANNEL_ID` (optional). Goes into `.env.example` and the README Configuration table in the implementing PR.
-- **Bot permissions in the announcements channel:** View Channels, Send Messages, Embed Links. All three are already in the README's permission table; their "Why" text already names announcements.
+- **New environment variables:** `ANNOUNCEMENTS_CHANNEL_ID` and `RULES_CHANNEL_ID`, both optional. Both go into `.env.example` and the README Configuration table in the implementing PR. `RULES_CHANNEL_ID` names the server's existing rules channel; the planned rules-and-verification feature reuses it rather than adding its own.
+- **Bot permissions in the announcements channel:** View Channels, Send Messages, Embed Links. All three are already in the README's permission table; their "Why" text already names announcements. Pinging one member needs no extra permission; **Mention @everyone, @here and All Roles** is not needed and is not requested.
 - **Intents:** no new intent. `GuildMembers` (privileged, already requested and already listed in the README's Discord setup) carries both events.
-- **Uncached members (AC-09).** In the installed discord.js 14.27.0, `guildMemberRemove` is only emitted for a member the bot has in its cache, unless the client enables the `GuildMember` partial (`src/client/actions/GuildMemberRemove.js` → `Action#getMember`). Today the client enables no partials, so a member who joined before the last restart would leave silently. How the bot closes that gap is a Step 2 design decision.
+- **Uncached members (AC-12).** In the installed discord.js 14.27.0, `guildMemberRemove` is only emitted for a member the bot has in its cache, unless the client enables the `GuildMember` partial (`src/client/actions/GuildMemberRemove.js` → `Action#getMember`). Today the client enables no partials, so a member who joined before the last restart would leave silently. How the bot closes that gap is a Step 2 design decision.
 
-## 9. Open questions
+## 9. Resolved questions
 
-Each has a recommendation; approving this document without comment takes all four.
+Answered by the owner in session, 2026-11-07.
 
-- **Q1 - Ping the new member?** AC-16 says no: the join mention renders the member's name but sends no notification, matching the status messages, which ping nobody. Pinging only the new member is possible (`allowedMentions` limited to their ID) and some servers do it. Once rules verification lands, a new member sees only the rules channel and won't see the announcements channel anyway, so a ping would point them at a message they can't open. **Recommendation: no ping.**
-- **Q2 - Announce bots?** AC-10 skips bot accounts. Bots are added by owners, who already know. **Recommendation: skip bots.** The alternative is to announce them with the same phrase, which reads oddly for a bot.
-- **Q3 - Rules channel line.** The README's roadmap says the welcome "points them to the rules channel". There is no rules channel yet, and per Q1 the newcomer won't see the announcement once verification lands. **Recommendation: leave it out (§2) and update the README's feature description to match.**
-- **Q4 - Raids.** A raid of 200 joins posts 200 announcements; discord.js queues them under Discord's rate limits, so they arrive late but the bot holds no growing state of its own. **Recommendation: accept for now**, as status-messages Q2 did for crash loops. The anti-spam feature is the place to detect raids and could pause announcements then.
+- **Q1 - Ping the new member?** *Resolved: yes, ping.* The join announcement's message text mentions the new member and `allowedMentions` is limited to their ID (AC-02, AC-19). The draft recommended no ping. **Note for the verification feature:** once new members can see only the rules channel, Discord is not expected to notify a member about a mention in a channel they can't view, so the ping may stop reaching them then. Unverified here; check it at that feature's Step 5.
+- **Q2 - Announce bots?** *Resolved: skip bots* (AC-13).
+- **Q3 - Rules channel line.** *Resolved: add it.* The server already has a rules channel. The join announcement points to it through `RULES_CHANNEL_ID` (AC-05 to AC-07). The line's wording in §6.3 is a draft for the owner to confirm.
+- **Q4 - Raids.** *Resolved: accept for now.* A raid of 200 joins posts 200 announcements; discord.js queues them under Discord's rate limits, so they arrive late but the bot holds no growing state of its own. The anti-spam feature is the place to detect raids and could pause announcements then.
 
 ## 10. Approval
 
-- [ ] Human approval of this document (Step 1), including the copy in §6 and answers to Q1-Q4.
+- [ ] Human approval of this document (Step 1), including the rules line in §6.3.
