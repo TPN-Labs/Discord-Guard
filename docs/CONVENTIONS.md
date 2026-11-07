@@ -51,8 +51,9 @@ The complete exception list is: a different toolchain or runtime; a different tr
 | Server | The one Discord server (guild) the bot guards. |
 | Member | Anyone in the server. |
 | Verified member role | The role granted by reacting ✅ under the rules message; it unlocks the rest of the server. |
-| Rules channel / rules message | The channel a new member sees first, and the single bot-posted message in it that carries the ✅ reaction. |
-| Announcements channel | Where join and leave messages are posted. |
+| Rules channel / rules message | The channel a new member sees first (set by `RULES_CHANNEL_ID`), and the single bot-posted message in it that carries the ✅ reaction. |
+| Announcements channel | Where join and leave announcements are posted; set by `ANNOUNCEMENTS_CHANNEL_ID`. |
+| Join announcement / leave announcement | The green embed (pinging the new member) and the grey embed the bot posts in the announcements channel when a member joins or leaves. |
 | Moderation log channel | Where the bot records every automatic action (kicks) with its reason and evidence. |
 | Status channel / status message | The channel set by `STATUS_CHANNEL_ID`, and the green online or red offline embed the bot posts there when it starts or stops. |
 | Moderator | A member with a configured moderator role. Never checked by anti-spam. |

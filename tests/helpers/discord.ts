@@ -68,3 +68,61 @@ export function fakeStatusChannel({ history = [], send = async () => ({}), ...ch
 export function fakeLogger() {
 	return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), fatal: vi.fn() };
 }
+
+export const FAKE_GUILD_ID = '456789012345678901';
+export const FAKE_RULES_CHANNEL_ID = '567890123456789012';
+
+export interface FakeAnnouncementsChannelOptions extends FakeStatusChannelOptions {
+	guildId?: string;
+	/** What guild.members.fetch() does at start-up; an Error rejects. */
+	members?: number | Error;
+}
+
+/** An announcements channel: a status-style channel that also belongs to a guild whose members can be fetched. */
+export function fakeAnnouncementsChannel({ guildId = FAKE_GUILD_ID, members = 3, ...channelOptions }: FakeAnnouncementsChannelOptions = {}) {
+	return {
+		...fakeStatusChannel(channelOptions),
+		guildId,
+		guild: {
+			id: guildId,
+			members: {
+				fetch: vi.fn(async () => {
+					if (members instanceof Error) throw members;
+					return new Collection(Array.from({ length: members }, (_, index) => [String(index), {}]));
+				})
+			}
+		}
+	};
+}
+
+/** A client whose channel cache answers with the given channel (or rejects with the given error). */
+export function fakeAnnouncementsClient(channel: unknown, fetchError: Error | null = null) {
+	return {
+		channels: { fetch: vi.fn(async () => (fetchError ? Promise.reject(fetchError) : channel)) },
+		user: { id: FAKE_BOT_ID }
+	};
+}
+
+export interface FakeMemberOptions {
+	bot?: boolean;
+	guildId?: string;
+	displayName?: string;
+	username?: string;
+	joinedAt?: Date | null;
+}
+
+/** The parts of a GuildMember (or a partial one) the announcements feature reads. */
+export function fakeMember(
+	client: unknown,
+	{ bot = false, guildId = FAKE_GUILD_ID, displayName = 'Ion', username = 'ion1930', joinedAt = null }: FakeMemberOptions = {}
+) {
+	return {
+		id: FAKE_MEMBER_ID,
+		guild: { id: guildId },
+		user: { bot, username },
+		displayName,
+		joinedAt,
+		client,
+		displayAvatarURL: () => 'https://cdn.discordapp.com/embed/avatars/0.png'
+	};
+}

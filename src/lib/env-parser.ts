@@ -12,7 +12,9 @@ export function envParseArray(key: 'OWNERS', defaultValue?: string[]): string[] 
 
 const SNOWFLAKE = /^\d{17,20}$/;
 
-export function envParseOptionalSnowflake(key: 'STATUS_CHANNEL_ID'): string | null {
+export type OptionalSnowflakeKey = 'STATUS_CHANNEL_ID' | 'ANNOUNCEMENTS_CHANNEL_ID' | 'RULES_CHANNEL_ID';
+
+export function envParseOptionalSnowflake(key: OptionalSnowflakeKey): string | null {
 	const value = process.env[key]?.trim();
 	if (isNullishOrEmpty(value)) return null;
 	if (!SNOWFLAKE.test(value)) throw new Error(`[ENV] ${key} - The key must be a Discord ID (17-20 digits).`);

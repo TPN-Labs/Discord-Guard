@@ -51,3 +51,24 @@ describe('envParseOptionalSnowflake', () => {
 		}
 	);
 });
+
+// docs/specs/2026-11-07-join-leave-announcements: AC-06, AC-07, AC-15, AC-16
+describe.each(['ANNOUNCEMENTS_CHANNEL_ID', 'RULES_CHANNEL_ID'] as const)('envParseOptionalSnowflake(%s)', (key) => {
+	it('returnsNullWhenTheVariableIsUnset', () => {
+		vi.stubEnv(key, undefined);
+
+		expect(envParseOptionalSnowflake(key)).toBeNull();
+	});
+
+	it('returnsTheTrimmedIdWhenItIsADiscordId', () => {
+		vi.stubEnv(key, ' 123456789012345678 ');
+
+		expect(envParseOptionalSnowflake(key)).toBe('123456789012345678');
+	});
+
+	it('refusesToStartWithTheKeyNamedWhenTheValueIsNotADiscordId', () => {
+		vi.stubEnv(key, 'abc');
+
+		expect(() => envParseOptionalSnowflake(key)).toThrow(`[ENV] ${key} - The key must be a Discord ID (17-20 digits).`);
+	});
+});
