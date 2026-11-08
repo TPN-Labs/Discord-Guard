@@ -2,7 +2,8 @@ import './lib/setup';
 import { container, LogLevel, SapphireClient } from '@sapphire/framework';
 import { GatewayIntentBits, Partials } from 'discord.js';
 import { MemberAnnouncer } from './lib/announcements/announcer';
-import { envParseOptionalSnowflake } from './lib/env-parser';
+import { SpamGuard } from './lib/antispam/guard';
+import { envParseArray, envParseOptionalSnowflake } from './lib/env-parser';
 import { StatusAnnouncer } from './lib/status/announcer';
 import { StatusLifecycle } from './lib/status/lifecycle';
 import { registerShutdownHooks } from './lib/status/shutdown';
@@ -27,6 +28,7 @@ const client = new SapphireClient({
 		GatewayIntentBits.GuildExpressions, // formerly GUILD_EMOJIS_AND_STICKERS
 		GatewayIntentBits.GuildVoiceStates,
 		GatewayIntentBits.GuildMessages,
+		GatewayIntentBits.MessageContent, // privileged: anti-spam reads message text (repeats, links, kick log)
 		GatewayIntentBits.GuildMessageReactions,
 		GatewayIntentBits.DirectMessages,
 		GatewayIntentBits.DirectMessageReactions
@@ -36,6 +38,8 @@ const client = new SapphireClient({
 });
 
 container.memberAnnouncer = new MemberAnnouncer({ channelId: announcementsChannelId, rulesChannelId, logger: container.logger });
+container.spamGuard = new SpamGuard({ ownerIds: envParseArray('OWNERS'), logChannelId: announcementsChannelId, logger: container.logger });
+container.spamGuard.start();
 container.statusAnnouncer = new StatusAnnouncer({ channelId: statusChannelId, lifecycle: new StatusLifecycle(), logger: container.logger });
 
 // Posts the offline status message, closes the gateway and exits, within SHUTDOWN_DEADLINE_MS.
