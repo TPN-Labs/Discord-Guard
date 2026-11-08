@@ -381,6 +381,18 @@ In a test server with a separate bot application, never the live server, with th
 
 Screenshots (Constitution §3): this feature adds new messages, so there is no "before" frame. The PR carries cropped "after" shots of one kick log (successful kick with censored link) and one DM, and says no "before" frame exists.
 
-## 15. Approval
+## 15. Implementation notes (Step 4)
+
+Contract polish found while building. Behaviour matches §4-§5 except where noted.
+
+- **`excerpt` lives in `message-facts.ts`**, not `kick-log.ts`: `toTrackedMessage` needs it, and the kick log only displays what the tracker already stored.
+- **`handleMessage` returns `void`**, not a promise: everything up to the queue is synchronous by design (§5.2), and enforcement runs inside the queue. It catches its own errors and logs them, so the listener can't receive a throw.
+- **The failed-kick delete-only pass (D3) also goes through `EnforcementQueue`**, so it is bounded and de-duplicated like a full enforcement.
+- **Two layers stop a second enforcement:** `handleMessage` returns early when the member is in the queue, and `EnforcementQueue.submit` answers `'duplicate'`. Mutation M11 in the validation trail shows each alone is enough and removing both is caught.
+- `FoundLink` gained `isInvite`; `kick-log.ts` exports `forDisplay` (escape and neutralize) for its own test; `SpamGuardLogger` includes `debug` for the sweep line, which reports tracked members and messages, the number D4 asks to measure at Step 5 (`MessageTracker.messageCount` feeds it).
+- **Link spread usually fires first.** A spammer who posts the same link in three channels is kicked on the **second** message, under link spread alone, because AC-05 needs only two channels and AC-06 reports the rules of the message that started enforcement. The third message, if it arrives during enforcement, is still deleted. Two guard tests first expected both rules; their fixture was changed to plain text so they test the cross-channel rule, and a separate test pins the link-spread order (validation trail, unit 9).
+- Red and green evidence, mutation checks and the smoke run are in [`validation-trail.md`](validation-trail.md).
+
+## 16. Approval
 
 - [x] Human approval of this document (Step 2), including D1-D8. Approved by the owner in session, 2026-11-08.

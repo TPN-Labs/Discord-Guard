@@ -214,6 +214,10 @@ Answered by the owner in session, 2026-11-08.
 - **Q11 - Link check.** *Any link in 2 or more channels within 60 s* (AC-05). An invite-only variant and dropping the check were declined.
 - **Q12 - Who is checked.** *Everyone not exempt*, with no special treatment by account age (AC-11).
 
+### Notes from design (Step 2)
+
+- **Failed-kick cooldown** ([`design.md` D3](design.md#13-risks-and-design-questions), approved 2026-11-08). For 10 minutes after a refused kick, a rule that fires for that member only deletes their tracked messages: no DM (AC-12), kick (AC-13) or kick log (AC-15). This narrows those three criteria for that one case, so a member the bot can't kick doesn't flood the announcements channel.
+
 ## 11. Questions resolved at approval
 
 The owner approved this document on 2026-11-08 without changes, which accepts the proposed default for each question below.
