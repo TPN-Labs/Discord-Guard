@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| Status | **Draft (Step 1)** - awaiting owner approval |
+| Status | **Approved (Step 1)** - 2026-11-08, with the §11 defaults and the §6 copy |
 | Triage | Feature (0 → 1 → 2 → 4 → 5 → 6) - classified by the owner in session, 2026-11-08 |
 | Ticket | ENG-00 - no ticket |
 | Date | 2026-11-08 |
-| Next | `design.md` (Step 2), after this document is approved |
+| Next | [`design.md`](design.md) (Step 2) |
 
 ## 1. Problem
 
@@ -73,7 +73,7 @@ All windows are **sliding**: when a message arrives, the bot looks back over the
 - **AC-02 - Flood.** When a member has posted **8 or more** messages in the last **10 s**, in any channels, the rule fires on the 8th.
 - **AC-03 - Repeat.** When a member has posted the **same text 4 or more times** in the last **60 s**, in any channels, the rule fires on the 4th. Text is compared after trimming leading and trailing whitespace and ignoring letter case. A message with no text (only attachments, stickers or embeds) never counts towards this rule.
 - **AC-04 - Mention burst.** When the mentions in a member's messages from the last **30 s** add up to **6 or more**, the rule fires on the message that reaches 6. Each distinct member and each distinct role mentioned in a message counts as 1; a message that tries `@everyone` or `@here` adds 3, whether or not the member is allowed to use it.
-- **AC-05 - Link spread.** When a member has posted messages containing a link in **2 or more different channels** in the last **60 s**, the rule fires on the message that reaches 2. A link is an `http://` or `https://` URL, including one inside a masked link (`[text](url)`), or a Discord invite (`discord.gg/...`, `discord.com/invite/...`), with or without a scheme. Exceptions are open: see Q-A in §11.
+- **AC-05 - Link spread.** When a member has posted messages containing a link in **2 or more different channels** in the last **60 s**, the rule fires on the message that reaches 2. A link is an `http://` or `https://` URL, including one inside a masked link (`[text](url)`), or a Discord invite (`discord.gg/...`, `discord.com/invite/...`), with or without a scheme. Links to `tenor.com` or `giphy.com` (and their subdomains) and Discord message links (`discord.com/channels/...`) don't count towards this rule (Q-A); they are still censored in the kick log.
 - **AC-06 - One enforcement per member.** When a message makes several rules fire, or the member keeps posting while enforcement is in progress, the member is enforced against once. The kick log names every rule that fired on the message that started enforcement.
 - **AC-07 - Only new messages.** Edited messages and messages from before the bot started are never checked. Direct messages to the bot are ignored.
 
@@ -133,7 +133,7 @@ When a rule fires, the bot does these steps in this order:
 
 ## 6. Copy
 
-**Drafts, for the owner to approve or replace (Q-C in §11).** Romanian, in the Ion Iliescu voice of the status messages and announcements, with comma-below diacritics (ș, ț). The status-messages content note applies: nothing about June 1990 or December 1989, which also rules out "golani". Once approved, tests compare against this copy exactly.
+**Approved by the owner on 2026-11-08 (Q-C in §11).** Romanian, in the Ion Iliescu voice of the status messages and announcements, with comma-below diacritics (ș, ț). The status-messages content note applies: nothing about June 1990 or December 1989, which also rules out "golani". Once approved, tests compare against this copy exactly.
 
 ### 6.1 DM to the kicked member
 
@@ -214,15 +214,15 @@ Answered by the owner in session, 2026-11-08.
 - **Q11 - Link check.** *Any link in 2 or more channels within 60 s* (AC-05). An invite-only variant and dropping the check were declined.
 - **Q12 - Who is checked.** *Everyone not exempt*, with no special treatment by account age (AC-11).
 
-## 11. Open questions
+## 11. Questions resolved at approval
 
-Defaults are written into the criteria above; approving this document approves them unless the owner changes them.
+The owner approved this document on 2026-11-08 without changes, which accepts the proposed default for each question below.
 
-- **Q-A - Links that shouldn't count for link spread.** Discord's own GIF picker sends a `tenor.com` link, so a member sending a GIF in two channels within a minute would be kicked under AC-05 as written. *Proposed:* links to `tenor.com`, `giphy.com`, and Discord message links (`discord.com/channels/...`) don't count towards AC-05. They are still censored in the kick log.
-- **Q-B - Raid limits.** *Proposed:* 5 enforcements at once, 50 waiting, the rest skipped (AC-27). Skipping means a spammer in a large raid may not be kicked, but unbounded work is against [`CONVENTIONS.md §5`](../../CONVENTIONS.md#5-production-readiness-checklist). Alternatively the cap could be larger, since each enforcement is only a few requests.
-- **Q-C - Copy.** The DM, kick-log strings and rule names in §6 are drafts.
-- **Q-D - Other servers.** *Proposed:* anti-spam acts in every server the bot is in, and the kick log is posted only when the announcements channel belongs to that server; otherwise the enforcement goes to the bot's log (as AC-30). The bot is meant to be in one server, so this only matters for a test bot added to two.
+- **Q-A - Links that shouldn't count for link spread.** *Resolved: proposed default (AC-05).* Discord's own GIF picker sends a `tenor.com` link, so a member sending a GIF in two channels within a minute would be kicked under AC-05 as written. *Proposed:* links to `tenor.com`, `giphy.com`, and Discord message links (`discord.com/channels/...`) don't count towards AC-05. They are still censored in the kick log.
+- **Q-B - Raid limits.** *Resolved: proposed default (AC-27).* *Proposed:* 5 enforcements at once, 50 waiting, the rest skipped (AC-27). Skipping means a spammer in a large raid may not be kicked, but unbounded work is against [`CONVENTIONS.md §5`](../../CONVENTIONS.md#5-production-readiness-checklist). Alternatively the cap could be larger, since each enforcement is only a few requests.
+- **Q-C - Copy.** *Resolved: the §6 drafts are approved as written.*
+- **Q-D - Other servers.** *Resolved: proposed default.* *Proposed:* anti-spam acts in every server the bot is in, and the kick log is posted only when the announcements channel belongs to that server; otherwise the enforcement goes to the bot's log (as AC-30). The bot is meant to be in one server, so this only matters for a test bot added to two.
 
 ## 12. Approval
 
-- [ ] Human approval of this document (Step 1), including the defaults in §11 and the copy in §6.
+- [x] Human approval of this document (Step 1), including the defaults in §11 and the copy in §6. Approved by the owner in session, 2026-11-08.
