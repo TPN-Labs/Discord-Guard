@@ -67,7 +67,7 @@ When a rule fires, the bot:
 
 1. sends the member a short DM saying why and that they can rejoin (it waits at most 3 seconds for it),
 2. kicks them, with the rule in the audit-log reason,
-3. deletes every message it saw from them in the **last 10 minutes**, in every channel (a kick can't purge older history, and the bot keeps no storage),
+3. deletes every message it saw from them in the **last 10 minutes**, in every channel, including anything they post while the bot is acting (a kick can't purge older history, and the bot keeps no storage),
 4. posts a red **kick log** in the announcements channel: who, which rules, the deleted messages and the outcome. Links in the kick log are censored to their bare domain name - `https://free-nitro.ru/claim` shows as `free-nitro` - so the log never reposts a working spam link, and nothing in it can ping anyone.
 
 Members with the **Manage Messages** permission and the users in `OWNERS` are never checked. If the kick is refused (the member's role is above the bot's), their messages are still deleted, and for the next 10 minutes any new spam from them is deleted without another DM or kick log.

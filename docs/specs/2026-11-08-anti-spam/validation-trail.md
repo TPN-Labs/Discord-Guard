@@ -19,7 +19,16 @@ Red-then-green evidence for every unit, in the order it was built (Constitution 
 | 9b | Test-fixture defect | same | after implementing: 2 failed, 24 passed (26) | `sendsTheApprovedDmPingingNobody` and `kicksWithTheRuleNamesAsTheAuditLogReason` expected `mesaje în 3 canale într-un minut, linkuri în 2 canale într-un minut`; received `Anti-spam: linkuri în 2 canale într-un minut`. The code was right: with a link in every message, link spread fires on the **second** message (AC-05: two channels) and AC-06 reports the rules of that message. The fixture, not the expectation of the requirements, was wrong: both tests now spam plain text so they test the cross-channel rule as named, and a new test, `firesLinkSpreadOnTheSecondChannelBeforeCrossChannelIsReached`, pins the link case (design §15) | 295 passed (suite) |
 | 10 | `antiSpamMessage` listener; `src/index.ts` (Message Content intent, `SpamGuard` creation and `start()`) | none (design §11: one-line delegate) | - | - | 295 passed; smoke run below |
 
-No test was edited to make code pass; 9b corrected a fixture whose input contradicted its own test name, and is recorded rather than hidden. Final run: `yarn lint`, `yarn check-types`, `yarn format:check`, `yarn test` (24 files, 295 passed) and `yarn build` all exit 0.
+No test was edited to make code pass; 9b corrected a fixture whose input contradicted its own test name, and is recorded rather than hidden. Final run before review: `yarn lint`, `yarn check-types`, `yarn format:check`, `yarn test` (24 files, 295 passed) and `yarn build` all exit 0. After the PR review round: the same five exit 0 with 24 files, **304 passed**.
+
+### PR review round ([TPN-Labs/Discord-Guard#27](https://github.com/TPN-Labs/Discord-Guard/pull/27))
+
+| # | Unit | Test file | Red run | Reason for red | Green |
+|---|---|---|---|---|---|
+| 11 | `MessageTracker.has` | `tests/lib/antispam/tracker.test.ts` | 1 failed (with unit 12's run: 9 failed, 35 passed (44)) | `Error: not implemented` | see 12 |
+| 12 | `SpamGuard` drain (AC-37) and deadlines (AC-38) | `tests/lib/antispam/guard.test.ts` | 8 failed | The two drain tests: they failed fast (110 ms, 154 ms) on the assertion that the late message's channel got a `bulkDelete`, which never happened because nothing drained it. The six deadline tests: a hanging kick, delete or send kept the enforcement from ever finishing, so `Enforced against` never reached the log and the 1 s wait timed out | 304 passed (suite); guard file 10 of 10 runs green |
+
+One test changed before its first green run: `stopsCallingDiscordOnceTheEnforcementDeadlineHasPassed` asserted that channel C, never tried before the deadline, is **never** deleted. While implementing, the design chose to give never-tried channels to the follow-up pass, a stronger AC-14 guarantee, so the test now asserts C is not tried by the enforcement itself (`deleted 0/3`, kick log in the bot's log) but is deleted once by the follow-up, while the timed-out A and B are not retried. The implementation never ran against the old assertion.
 
 ## Mutation checks
 
@@ -44,6 +53,18 @@ Deliberate breakages, each applied alone to the finished code, run against `test
 | M15 | Kick waits for the DM with no timeout | **Killed** (1): `kicksAfterTheDmTimeoutWhenTheDmHangs` |
 | M16 | An already-deleted single message counts as a failure | **Killed** (1): `countsAnAlreadyDeletedSingleMessageAsDeleted` |
 | M17 | Tracked messages never expire | **Killed** (5), including `neverDeletesAMessageOlderThanTenMinutes`, `forgetsExpiredMessagesEveryMinuteOnceStarted` |
+
+PR review round, against `tests/lib/antispam/guard.test.ts` (35 tests):
+
+| # | Mutation | Result |
+|---|---|---|
+| M18 | Enforcement no longer drains late messages | **Killed** (1): `deletesMessagesPostedWhileTheKickLogWasBeingPosted` |
+| M19 | Delete-only pass no longer drains | **Killed** (1): `deletesMessagesPostedDuringADeleteOnlyPass` |
+| M20 | Discord calls have no timeout | **Killed** (7), including `kicksAfterTheDmTimeoutWhenTheDmHangs`, `logsTheKickLogFactsWhenPostingItTakesTooLong`, `schedulesAFollowUpForMessagesPostedAfterTheDeadline` |
+| M21 | No follow-up pass | **Killed** (2): `schedulesAFollowUp…`, `stopsCallingDiscordOnceTheEnforcementDeadlineHasPassed` |
+| M22 | Never-tried messages dropped instead of kept for the follow-up | **Killed** (2): same two |
+| M23 | Deadline never checked | **Killed** (2): same two |
+| M24 | A late success after a timeout isn't logged | **Killed** (1): `logsTheLateResultOfACallThatTimedOut` |
 
 Not mutation-tested: `GatewayIntentBits.MessageContent` in `src/index.ts`. Its effect only exists with a live gateway; it is checked by hand at Step 5 (AC-34).
 

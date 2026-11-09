@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Approved (Step 2)** - 2026-11-08, with the recommendations for D1-D8 |
+| Status | **Approved (Step 2)** - 2026-11-08, with the recommendations for D1-D8. **Amended in PR review 2026-11-09 (§5.8) - amendment pending owner approval** |
 | Triage | Feature (0 → 1 → 2 → 4 → 5 → 6) |
 | Requirements | [`requirements.md`](requirements.md) (approved 2026-11-08) |
 | Ticket | ENG-00 - no ticket |
@@ -286,6 +286,16 @@ All in the description. Worst case: 10 × (~25-char channel link + 200-char exce
 - **Failed-kick cooldown (D3):** a `Map<key, expiresAt>` of up to 1,000 members for 10 minutes; oldest dropped first.
 - **Durable:** none. A restart forgets every history, the queue and the cooldown. No ADR; Constitution §6 open item 3 stays open.
 
+### 5.8 Late messages and deadlines (amended in PR review, 2026-11-09)
+
+For requirements AC-37 and AC-38, raised on [TPN-Labs/Discord-Guard#27](https://github.com/TPN-Labs/Discord-Guard/pull/27).
+
+- **Budget.** Each pass (enforcement, delete-only, follow-up) starts with a deadline of `enforcementDeadlineMs` (30 s) on the monotonic clock (`performance.now()`), so the injectable `now` used for Discord timestamps can't skew it.
+- **`bounded(label, budget, call, limitMs)`** wraps every Discord call: the DM (3 s), the kick, each channel's fetch + bulk delete, the kick-log channel lookup and the send (10 s each, `callTimeoutMs`), each cut to what is left of the deadline. discord.js's 15 s request timeout starts only when a request leaves its rate-limit queue; this timer starts when the call is made. A timeout rejects with `timed out after N ms`, which every caller already handles as a failure. The call can't be cancelled, so a handler logs its late outcome at info (`Late result: … succeeded|failed after timing out`).
+- **Deadline passed.** Before each channel, and before the kick log, the pass checks the deadline. A channel never tried is kept (its messages go back into the tracker) for a follow-up; a kick log not posted goes to the bot's log with an error, as in AC-33.
+- **Drain.** After the kick log (enforcement) or the deletes (delete-only), `drain` repeatedly takes and deletes whatever the tracker holds for the member, until a take comes back empty or the deadline passes. Gateway events are macrotasks, so none can land between the last empty take and the queue releasing the member: nothing is left behind. Late deletions are counted in the info line (`… and n/m more posted during enforcement`), not in the already-posted kick log.
+- **Follow-up.** Only when the deadline stopped a pass with messages still tracked, a `setTimeout(0)` (unref'd) submits a follow-up drain for the member through `EnforcementQueue`, after the current pass has left it. It is bounded and de-duplicated like any enforcement, and schedules another only under the same condition, so the chain lasts only while deletes keep running into the deadline. Limiting it to the deadline case keeps D3 intact: a member whose kick failed doesn't lose ordinary, non-firing messages to it.
+
 ## 8. Failure modes
 
 | Situation | Members and moderators see | Log | Bot keeps running | AC |
@@ -299,6 +309,9 @@ All in the description. Worst case: 10 × (~25-char channel link + 200-char exce
 | Message already deleted by someone else | Nothing; counted as deleted | nothing | yes | AC-14 |
 | Kick-log channel unusable or send fails | No kick log | error + the kick-log facts in the bot's log | yes | AC-33 |
 | Kick-log channel in another server | No kick log in that server | warn + the kick-log facts | yes | Q-D |
+| A Discord call hangs (slow network, long rate-limit wait) | That step counts as failed after 10 s (DM: 3 s) | error (warn for the DM); info if it completes later | yes | AC-38 |
+| An enforcement reaches 30 s | Remaining channels and late messages go to a follow-up pass; kick log goes to the bot's log if not yet posted | error with the counts and the kick-log facts | yes | AC-37, AC-38 |
+| Member posts while their enforcement runs | Those messages are deleted before it ends | info with the late count | yes | AC-37 |
 | Raid: > 55 members firing at once | First 5 enforced, 50 wait, the rest not enforced (their history stays; a later message can fire again) | one warn when skipping starts, one with the count when the queue empties | yes | AC-27 |
 | `message.member` is `null` for a non-webhook guild message | Message ignored | warn once per process | yes | design-only |
 | Rate limited | Slower enforcement | discord.js handles it | yes | AC-35 |
@@ -310,6 +323,7 @@ All in the description. Worst case: 10 × (~25-char channel link + 200-char exce
 | Work per message without enforcement | O(messages in the member's history) ≤ 50; no Discord call |
 | Firing message → kicked and deleted | target ≤ 5 s in a quiet server (AC-16); worst case 3 s DM wait + kick + deletes |
 | Enforcements at once / waiting | ≤ 5 / ≤ 50 |
+| One Discord call / one pass | ≤ 10 s (DM ≤ 3 s) / ≤ 30 s, rate-limit waiting included |
 | Memory ceiling | ≈ 125 MB theoretical, < 5 MB realistic (§7) |
 | Sweep | every 60 s, O(tracked members) |
 
@@ -393,6 +407,9 @@ Contract polish found while building. Behaviour matches §4-§5 except where not
 - **Link spread usually fires first.** A spammer who posts the same link in three channels is kicked on the **second** message, under link spread alone, because AC-05 needs only two channels and AC-06 reports the rules of the message that started enforcement. The third message, if it arrives during enforcement, is still deleted. Two guard tests first expected both rules; their fixture was changed to plain text so they test the cross-channel rule, and a separate test pins the link-spread order (validation trail, unit 9).
 - Red and green evidence, mutation checks and the smoke run are in [`validation-trail.md`](validation-trail.md).
 
+**Amended in PR review ([TPN-Labs/Discord-Guard#27](https://github.com/TPN-Labs/Discord-Guard/pull/27), 2026-11-09):** §5.8 added for the two review findings (late messages, deadlines). `MessageTracker.has` added for the follow-up check. Evidence in [`validation-trail.md`](validation-trail.md#pr-review-round-tpn-labsdiscord-guard27).
+
 ## 16. Approval
 
 - [x] Human approval of this document (Step 2), including D1-D8. Approved by the owner in session, 2026-11-08.
+- [ ] Human approval of the PR-review amendment (§5.8; requirements AC-37, AC-38).

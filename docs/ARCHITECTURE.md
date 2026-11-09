@@ -77,6 +77,7 @@ In-memory state that grows with traffic must be capped or expire (Constitution Â
 | Announcements | More than 10 joins or leaves in progress at once (a raid) | the rest are skipped; one warn when skipping starts, one with the count when the backlog drains. Rate limits bound throughput, not the queue, so the cap is the bot's own |
 | Discord gateway | Member-list fetch at start-up fails or times out (120 s) | warn; leave announcements for members who joined before this start omit the duration |
 | Anti-spam | DM refused or slower than 3 s | warn; the kick goes ahead |
+| Anti-spam | A Discord call hangs, including a long rate-limit wait | counted as failed after 10 s (DM 3 s), logged; a late completion stands and is logged at info. One pass gives up after 30 s; what it didn't reach, and anything the member posted meanwhile, goes to a queued follow-up pass |
 | Anti-spam | Kick refused (role at or above the bot's, no Kick Members, member gone) | error; messages still deleted; kick log shows the failure; for 10 min new spam from that member is only deleted (no DM, kick or kick log) |
 | Anti-spam | Delete refused in a channel, or channel gone | error per channel; other channels still deleted; kick log's count shows the shortfall. A single already-deleted message counts as deleted |
 | Anti-spam | Kick-log channel unset, unusable, in another server, or send refused | the kick log's facts (censored) go to the bot's log instead: info when unset, warn for another server, error otherwise; no retry |

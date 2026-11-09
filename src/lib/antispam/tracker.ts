@@ -51,6 +51,11 @@ export class MessageTracker {
 		}
 	}
 
+	/** Whether the member has tracked messages (possibly expired, until the next sweep or take). */
+	public has(key: string): boolean {
+		return this.members.has(key);
+	}
+
 	/** Members tracked now. */
 	public get size(): number {
 		return this.members.size;

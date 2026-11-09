@@ -71,6 +71,16 @@ describe('MessageTracker', () => {
 		expect(tracker.take('g:new')).toHaveLength(1);
 	});
 
+	it('reportsWhetherItStillHoldsMessagesForAMember', () => {
+		const { tracker } = setup();
+		tracker.record('g:a', message(1, START));
+
+		expect(tracker.has('g:a')).toBe(true);
+		expect(tracker.has('g:b')).toBe(false);
+		tracker.take('g:a');
+		expect(tracker.has('g:a')).toBe(false);
+	});
+
 	it('sweepDropsExpiredMessagesAndEmptyMembers', () => {
 		const { clock, tracker } = setup();
 		tracker.record('g:old', message(1, START));

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Approved (Step 1)** - 2026-11-08, with the §11 defaults and the §6 copy |
+| Status | **Approved (Step 1)** - 2026-11-08, with the §11 defaults and the §6 copy. **Amended in PR review 2026-11-09 (AC-37, AC-38) - amendment pending owner approval** |
 | Triage | Feature (0 → 1 → 2 → 4 → 5 → 6) - classified by the owner in session, 2026-11-08 |
 | Ticket | ENG-00 - no ticket |
 | Date | 2026-11-08 |
@@ -131,6 +131,13 @@ When a rule fires, the bot does these steps in this order:
 - **AC-35 - Rate limits.** Deletes and kicks go through discord.js's own rate-limit handling. Messages in one channel are deleted with as few requests as Discord allows.
 - **AC-36 - Secrets.** No log line, DM, kick log or error from this feature contains the bot token or any value from `src/.env` other than `ANNOUNCEMENTS_CHANNEL_ID`.
 
+### Amended in PR review, 2026-11-09 (pending owner approval)
+
+Raised on [TPN-Labs/Discord-Guard#27](https://github.com/TPN-Labs/Discord-Guard/pull/27): messages posted after the deletion step had started were tracked but never deleted (against AC-06 and AC-14), and no limit covered time spent waiting in discord.js's rate-limit queue (against [`CONSTITUTION.md §4.V`](../../../CONSTITUTION.md#v-production-readiness--security-by-default---mandatory)).
+
+- **AC-37 - Messages posted during enforcement.** Messages the member posts while an enforcement (or a failed-kick delete-only pass) is running are deleted before it finishes, however late they arrive. The kick log counts the messages known when it was posted; the later ones are counted in the bot's log. If the deadline (AC-38) stops a pass first, the messages still tracked are deleted by a **follow-up pass** with a fresh deadline, queued like any enforcement.
+- **AC-38 - Deadlines.** Each Discord call made by anti-spam gives up after **10 s** (the DM after 3 s, AC-12), and one enforcement, delete-only pass or follow-up gives up after **30 s** in total, including time waiting on rate limits. A call that gives up counts as failed, as in AC-31 to AC-33 (the kick log reads `⚠️ Nu l-am putut da afară: timed out after …`), and is not retried. If it completes later, Discord's result stands and the bot logs it at info. A channel never tried because the deadline passed goes to the follow-up pass (AC-37). So a stalled enforcement holds a queue slot for at most 30 s.
+
 ## 6. Copy
 
 **Approved by the owner on 2026-11-08 (Q-C in §11).** Romanian, in the Ion Iliescu voice of the status messages and announcements, with comma-below diacritics (ș, ț). The status-messages content note applies: nothing about June 1990 or December 1989, which also rules out "golani". Once approved, tests compare against this copy exactly.
@@ -180,6 +187,8 @@ Measured in a test server with a separate bot application during Step 5 acceptan
 | M-08 | Enforcements running at once while 200 members fire rules together (Vitest) | ≤ 5, with ≤ 50 waiting |
 | M-09 | People notified by a kick log, with a spammer whose message is `@everyone` and whose name is `@here` | 0 |
 | M-10 | Kicked test accounts that receive the DM (DMs open) | 3 of 3 |
+| M-11 | Messages posted by a member whose kick fails, while their messages are being deleted, left undeleted afterwards | 0 |
+| M-12 | Longest time one enforcement holds a queue slot when every Discord call hangs (Vitest, scaled) | ≤ the enforcement deadline |
 
 ## 8. Permissions and configuration impact
 

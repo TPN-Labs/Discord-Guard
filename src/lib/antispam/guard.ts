@@ -20,6 +20,10 @@ export interface SpamGuardOptions {
 	now?: () => number;
 	/** How long the kick waits for the DM (AC-12). */
 	dmTimeoutMs?: number;
+	/** How long any other single Discord call may take, rate-limit waiting included (AC-38). */
+	callTimeoutMs?: number;
+	/** How long one enforcement, delete-only pass or follow-up may take in total (AC-38). */
+	enforcementDeadlineMs?: number;
 }
 
 /** The parts of a GuildMember the guard reads and acts on; a real GuildMember satisfies it. */
@@ -58,7 +62,23 @@ interface Offence {
 
 type KickOutcome = KickLogInput['kick'];
 
+/** When a pass must be done by, on the monotonic clock (`performance.now()`), so the injectable `now` can't skew it. */
+interface Budget {
+	readonly deadline: number;
+}
+
+interface DeleteResult {
+	deleted: number;
+	/** Messages whose channel was never tried because the deadline had passed; they go to a follow-up pass. */
+	skipped: TrackedMessage[];
+}
+
+/** A Discord call that didn't settle in time. It is treated as failed, and may still complete later (AC-38). */
+class CallTimeoutError extends Error {}
+
 export const DEFAULT_DM_TIMEOUT_MS = 3_000;
+export const DEFAULT_CALL_TIMEOUT_MS = 10_000;
+export const DEFAULT_ENFORCEMENT_DEADLINE_MS = 30_000;
 export const SWEEP_INTERVAL_MS = 60_000;
 /** After a refused kick, new spam is only deleted for this long (design D3). */
 export const FAILED_KICK_COOLDOWN_MS = TRACKING_WINDOW_MS;
@@ -66,8 +86,9 @@ export const MAX_COOLDOWN_MEMBERS = 1_000;
 
 /**
  * Anti-spam (docs/specs/2026-11-08-anti-spam). Records each checked member's messages, and when a rule fires: DM, kick,
- * delete what it tracked from them, kick log. Never throws into the listener: every failure is logged with the guild,
- * member and channel IDs, and the bot keeps running.
+ * delete what it tracked from them, kick log, then delete whatever they posted meanwhile. Every Discord call has a
+ * timeout and every pass a deadline, so a stalled call can hold a queue slot for at most the deadline. Never throws into
+ * the listener: every failure is logged with the guild, member and channel IDs, and the bot keeps running.
  */
 export class SpamGuard {
 	private readonly ownerIds: readonly string[];
@@ -75,6 +96,8 @@ export class SpamGuard {
 	private readonly logger: SpamGuardLogger;
 	private readonly now: () => number;
 	private readonly dmTimeoutMs: number;
+	private readonly callTimeoutMs: number;
+	private readonly enforcementDeadlineMs: number;
 	private readonly tracker: MessageTracker;
 	private readonly queue: EnforcementQueue;
 	/** Members whose kick was refused, until when; oldest first (D3). */
@@ -82,12 +105,22 @@ export class SpamGuard {
 	private sweepTimer: NodeJS.Timeout | null = null;
 	private warnedAboutMissingMember = false;
 
-	public constructor({ ownerIds, logChannelId, logger, now = () => Date.now(), dmTimeoutMs = DEFAULT_DM_TIMEOUT_MS }: SpamGuardOptions) {
+	public constructor({
+		ownerIds,
+		logChannelId,
+		logger,
+		now = () => Date.now(),
+		dmTimeoutMs = DEFAULT_DM_TIMEOUT_MS,
+		callTimeoutMs = DEFAULT_CALL_TIMEOUT_MS,
+		enforcementDeadlineMs = DEFAULT_ENFORCEMENT_DEADLINE_MS
+	}: SpamGuardOptions) {
 		this.ownerIds = ownerIds;
 		this.logChannelId = logChannelId;
 		this.logger = logger;
 		this.now = now;
 		this.dmTimeoutMs = dmTimeoutMs;
+		this.callTimeoutMs = callTimeoutMs;
+		this.enforcementDeadlineMs = enforcementDeadlineMs;
 		this.tracker = new MessageTracker({ now });
 		this.queue = new EnforcementQueue({ logger });
 
@@ -145,7 +178,7 @@ export class SpamGuard {
 			key,
 			toTrackedMessage({ id: message.id, channelId: message.channelId, createdAt: message.createdTimestamp, content: message.content })
 		);
-		// Already being enforced against: the message is recorded, so that enforcement deletes it.
+		// Already being enforced against: the message is recorded, and that pass drains it before finishing (AC-37).
 		if (this.queue.has(key)) return;
 
 		const rules = evaluateRules(history, message.createdTimestamp);
@@ -164,52 +197,99 @@ export class SpamGuard {
 	}
 
 	private async enforce(offence: Offence): Promise<void> {
-		await this.sendDm(offence);
-		const kick = await this.kick(offence);
+		const budget = this.newBudget();
+		await this.sendDm(offence, budget);
+		const kick = await this.kick(offence, budget);
 		if (!kick.ok) this.startCooldown(offence.key);
 
 		// Taken after the kick, so messages posted while the DM and kick were in flight are deleted too.
 		const messages = this.tracker.take(offence.key);
-		const deleted = await this.deleteMessages(offence, messages);
-		await this.postKickLog(offence, kick, messages, deleted);
+		const { deleted, skipped } = await this.deleteMessages(offence, messages, budget);
+		await this.postKickLog(offence, kick, messages, deleted, budget);
+		this.keepForFollowUp(offence.key, skipped);
+		const late = await this.drain(offence, budget);
 
 		this.logger.info(
-			`[AntiSpam] Enforced against ${offence.context}: rules ${offence.rules.join(', ')}; ${kick.ok ? 'kicked' : 'kick failed'}; deleted ${deleted}/${messages.length}.`
+			`[AntiSpam] Enforced against ${offence.context}: rules ${offence.rules.join(', ')}; ${kick.ok ? 'kicked' : 'kick failed'}; deleted ${deleted}/${messages.length}${describeLate(late)}.`
 		);
+		this.followUpIfNeeded(offence, budget);
 	}
 
 	/** A member whose kick failed keeps posting: delete, but no DM, kick or kick log for a while (D3). */
 	private async deleteOnly(offence: Offence): Promise<void> {
+		const budget = this.newBudget();
 		const messages = this.tracker.take(offence.key);
-		const deleted = await this.deleteMessages(offence, messages);
+		const { deleted, skipped } = await this.deleteMessages(offence, messages, budget);
+		this.keepForFollowUp(offence.key, skipped);
+		const late = await this.drain(offence, budget);
+
 		this.logger.info(
-			`[AntiSpam] ${offence.context} is in the failed-kick cooldown: rules ${offence.rules.join(', ')}; deleted ${deleted}/${messages.length} without a DM, kick or kick log.`
+			`[AntiSpam] ${offence.context} is in the failed-kick cooldown: rules ${offence.rules.join(', ')}; deleted ${deleted}/${messages.length}${describeLate(late)} without a DM, kick or kick log.`
 		);
+		this.followUpIfNeeded(offence, budget);
 	}
 
-	private async sendDm({ member, guild, rules, context }: Offence): Promise<void> {
-		let timer: NodeJS.Timeout | undefined;
-		const timeout = new Promise<'timeout'>((resolve) => {
-			timer = setTimeout(() => resolve('timeout'), this.dmTimeoutMs);
-		});
-		// Caught on its own, so a rejection after the timeout is never unhandled; discord.js bounds it at 15 s.
-		const send = member.send({ content: dmText(guild.name, rules), allowedMentions: { parse: [] } }).then(
-			() => 'sent' as const,
-			(error: unknown) => error
-		);
+	/** Deletes what a pass couldn't reach before its deadline, with a fresh deadline (AC-37, AC-38). */
+	private async followUp(offence: Offence): Promise<void> {
+		const budget = this.newBudget();
+		const late = await this.drain(offence, budget);
+		this.logger.info(`[AntiSpam] Follow-up for ${offence.context}: deleted ${late.deleted}/${late.tracked} messages left by the previous pass.`);
+		this.followUpIfNeeded(offence, budget);
+	}
 
-		const result = await Promise.race([send, timeout]);
-		clearTimeout(timer);
-		if (result === 'timeout') {
-			this.logger.warn(`[AntiSpam] Could not DM ${context}: timed out after ${this.dmTimeoutMs} ms; kicking anyway.`);
-		} else if (result !== 'sent') {
-			this.logger.warn(`[AntiSpam] Could not DM ${context}: ${describeDiscordError(result)}; kicking anyway.`);
+	/**
+	 * Deletes what the member posted while this pass was running, until nothing new is left (AC-37). Ends at the deadline;
+	 * anything still tracked then is handled by a follow-up pass.
+	 */
+	private async drain(offence: Offence, budget: Budget): Promise<{ deleted: number; tracked: number }> {
+		let deleted = 0;
+		let tracked = 0;
+		while (!this.isPastDeadline(budget)) {
+			const late = this.tracker.take(offence.key);
+			if (late.length === 0) break;
+
+			tracked += late.length;
+			const result = await this.deleteMessages(offence, late, budget);
+			deleted += result.deleted;
+			this.keepForFollowUp(offence.key, result.skipped);
+		}
+
+		return { deleted, tracked };
+	}
+
+	/**
+	 * Schedules a follow-up when the deadline stopped this pass with messages still tracked. Runs after this pass leaves the
+	 * queue, through the queue, so it stays bounded and one-per-member. Only reachable after a deadline, so a member whose
+	 * kick failed doesn't lose ordinary messages to it.
+	 */
+	private followUpIfNeeded(offence: Offence, budget: Budget): void {
+		if (!this.isPastDeadline(budget) || !this.tracker.has(offence.key)) return;
+		const timer = setTimeout(() => {
+			if (this.tracker.has(offence.key)) this.queue.submit(offence.key, () => this.followUp(offence));
+		}, 0);
+		timer.unref?.();
+	}
+
+	private keepForFollowUp(key: string, skipped: readonly TrackedMessage[]): void {
+		for (const message of skipped) this.tracker.record(key, message);
+	}
+
+	private async sendDm({ member, guild, rules, context }: Offence, budget: Budget): Promise<void> {
+		try {
+			await this.bounded(
+				`DM to ${context}`,
+				budget,
+				() => member.send({ content: dmText(guild.name, rules), allowedMentions: { parse: [] } }),
+				this.dmTimeoutMs
+			);
+		} catch (error) {
+			this.logger.warn(`[AntiSpam] Could not DM ${context}: ${describeDiscordError(error)}; kicking anyway.`);
 		}
 	}
 
-	private async kick({ member, rules, context }: Offence): Promise<KickOutcome> {
+	private async kick({ member, rules, context }: Offence, budget: Budget): Promise<KickOutcome> {
 		try {
-			await member.kick(kickReason(rules));
+			await this.bounded(`kick of ${context}`, budget, () => member.kick(kickReason(rules)));
 			return { ok: true };
 		} catch (error) {
 			const reason = describeDiscordError(error);
@@ -218,17 +298,26 @@ export class SpamGuard {
 		}
 	}
 
-	/** One bulk delete per channel, one channel at a time (AC-14, AC-32, AC-35). Returns how many are gone. */
-	private async deleteMessages({ client, context }: Offence, messages: readonly TrackedMessage[]): Promise<number> {
-		const byChannel = new Map<string, string[]>();
-		for (const message of messages) byChannel.set(message.channelId, [...(byChannel.get(message.channelId) ?? []), message.id]);
+	/** One bulk delete per channel, one channel at a time (AC-14, AC-32, AC-35, AC-38). */
+	private async deleteMessages({ client, context }: Offence, messages: readonly TrackedMessage[], budget: Budget): Promise<DeleteResult> {
+		const byChannel = new Map<string, TrackedMessage[]>();
+		for (const message of messages) byChannel.set(message.channelId, [...(byChannel.get(message.channelId) ?? []), message]);
 
 		let deleted = 0;
-		for (const [channelId, ids] of byChannel) {
+		const skipped: TrackedMessage[] = [];
+		for (const [channelId, channelMessages] of byChannel) {
+			if (this.isPastDeadline(budget)) {
+				skipped.push(...channelMessages);
+				continue;
+			}
+
+			const ids = channelMessages.map((message) => message.id);
 			try {
-				const channel = await client.channels.fetch(channelId);
-				if (channel === null || !('bulkDelete' in channel)) throw new Error('unknown channel or not a text channel');
-				await channel.bulkDelete(ids);
+				await this.bounded(`delete of ${ids.length} messages in channel ${channelId} from ${context}`, budget, async () => {
+					const channel = await client.channels.fetch(channelId);
+					if (channel === null || !('bulkDelete' in channel)) throw new Error('unknown channel or not a text channel');
+					await channel.bulkDelete(ids);
+				});
 				deleted += ids.length;
 			} catch (error) {
 				// A single message someone already deleted: gone, which is the goal (AC-14).
@@ -242,10 +331,21 @@ export class SpamGuard {
 			}
 		}
 
-		return deleted;
+		if (skipped.length > 0) {
+			this.logger.error(
+				`[AntiSpam] Enforcement deadline of ${this.enforcementDeadlineMs} ms passed: ${skipped.length} messages from ${context} are left for a follow-up pass.`
+			);
+		}
+		return { deleted, skipped };
 	}
 
-	private async postKickLog(offence: Offence, kick: KickOutcome, messages: readonly TrackedMessage[], deleted: number): Promise<void> {
+	private async postKickLog(
+		offence: Offence,
+		kick: KickOutcome,
+		messages: readonly TrackedMessage[],
+		deleted: number,
+		budget: Budget
+	): Promise<void> {
 		const input: KickLogInput = {
 			member: { displayName: offence.member.displayName, username: offence.username, id: offence.member.id },
 			rules: offence.rules,
@@ -262,8 +362,19 @@ export class SpamGuard {
 			this.logger.info(formatKickLogText(input));
 			return;
 		}
+		if (this.isPastDeadline(budget)) {
+			this.logger.error(
+				`[AntiSpam] Enforcement deadline of ${this.enforcementDeadlineMs} ms passed before the kick log for ${offence.context} was posted. ${formatKickLogText(input)}`
+			);
+			return;
+		}
 
-		const resolved = await resolveStatusChannel(offence.client, logChannelId);
+		let resolved;
+		try {
+			resolved = await this.bounded(`kick-log channel ${logChannelId}`, budget, () => resolveStatusChannel(offence.client, logChannelId));
+		} catch (error) {
+			resolved = { ok: false as const, reason: describeDiscordError(error) };
+		}
 		if (!resolved.ok) {
 			this.logger.error(`[AntiSpam] Kick-log channel ${logChannelId} is unusable: ${resolved.reason}. ${formatKickLogText(input)}`);
 			return;
@@ -273,12 +384,51 @@ export class SpamGuard {
 			return;
 		}
 
+		const { channel } = resolved;
 		try {
-			await resolved.channel.send(buildKickLog(input));
+			await this.bounded(`kick log for ${offence.context}`, budget, () => channel.send(buildKickLog(input)));
 		} catch (error) {
 			this.logger.error(
 				`[AntiSpam] Could not post the kick log for ${offence.context} in ${logChannelId}: ${describeDiscordError(error)}. ${formatKickLogText(input)}`
 			);
+		}
+	}
+
+	private newBudget(): Budget {
+		return { deadline: performance.now() + this.enforcementDeadlineMs };
+	}
+
+	/** Under a millisecond left counts as passed: Node can fire a timer up to 1 ms early. */
+	private isPastDeadline(budget: Budget): boolean {
+		return budget.deadline - performance.now() < 1;
+	}
+
+	/**
+	 * Runs one Discord call with a timeout: its own limit, cut to what is left of the pass's deadline. discord.js's 15 s
+	 * request timeout doesn't cover time waiting in its rate-limit queue; this does. A call that times out is treated as
+	 * failed; it can't be cancelled, so if it completes later the result stands and is logged at info (AC-38).
+	 */
+	private async bounded<T>(label: string, budget: Budget, call: () => Promise<T>, limitMs = this.callTimeoutMs): Promise<T> {
+		const ms = Math.max(1, Math.min(limitMs, Math.floor(budget.deadline - performance.now())));
+		const pending = call();
+		let timer: NodeJS.Timeout | undefined;
+		const timeout = new Promise<never>((_, reject) => {
+			timer = setTimeout(() => reject(new CallTimeoutError(`timed out after ${ms} ms`)), ms);
+		});
+
+		try {
+			return await Promise.race([pending, timeout]);
+		} catch (error) {
+			if (error instanceof CallTimeoutError) {
+				pending.then(
+					() => this.logger.info(`[AntiSpam] Late result: ${label} succeeded after timing out.`),
+					(lateError: unknown) =>
+						this.logger.info(`[AntiSpam] Late result: ${label} failed after timing out: ${describeDiscordError(lateError)}`)
+				);
+			}
+			throw error;
+		} finally {
+			clearTimeout(timer);
 		}
 	}
 
@@ -307,6 +457,10 @@ export class SpamGuard {
 			`[AntiSpam] Sweep: tracking ${this.tracker.size} members, ${this.tracker.messageCount} messages; ${this.cooldown.size} in the failed-kick cooldown.`
 		);
 	}
+}
+
+function describeLate({ deleted, tracked }: { deleted: number; tracked: number }): string {
+	return tracked === 0 ? '' : `, and ${deleted}/${tracked} more posted during enforcement`;
 }
 
 declare module '@sapphire/pieces' {

@@ -30,7 +30,9 @@ function setup({
 	logChannel: logChannelOptions = {} as FakeAnnouncementsChannelOptions,
 	bulkDelete = {} as Record<string, (ids: string[]) => Promise<unknown>>,
 	missingChannels = [] as string[],
-	dmTimeoutMs = 3_000
+	dmTimeoutMs = 3_000,
+	callTimeoutMs = 10_000,
+	enforcementDeadlineMs = 30_000
 } = {}) {
 	const order: string[] = [];
 	const textChannels = Object.fromEntries(
@@ -54,7 +56,15 @@ function setup({
 	const client = fakeGuardClient(channels);
 	const logger = { ...fakeLogger(), debug: vi.fn() };
 	const clock = { now: T0 };
-	const guard = new SpamGuard({ ownerIds: [FAKE_OWNER_ID], logChannelId, logger, now: () => clock.now, dmTimeoutMs });
+	const guard = new SpamGuard({
+		ownerIds: [FAKE_OWNER_ID],
+		logChannelId,
+		logger,
+		now: () => clock.now,
+		dmTimeoutMs,
+		callTimeoutMs,
+		enforcementDeadlineMs
+	});
 
 	const member = (options: FakeGuardMemberOptions = {}) =>
 		fakeGuardMember({
@@ -85,6 +95,17 @@ function setup({
 
 	return { guard, client, logger, logChannel, textChannels, order, clock, member, post, spam, done };
 }
+
+/** A promise the test settles by hand. */
+function deferred<T = unknown>() {
+	let resolve!: (value: T) => void;
+	const promise = new Promise<T>((res) => {
+		resolve = res;
+	});
+	return { promise, resolve };
+}
+
+const never = () => new Promise<never>(() => undefined);
 
 function logged(fn: ReturnType<typeof vi.fn>): string {
 	return fn.mock.calls.map((call) => call.map(String).join(' ')).join('\n');
@@ -416,6 +437,121 @@ describe('SpamGuard - failure modes', () => {
 			JSON.stringify(fn.mock.calls)
 		);
 		for (const output of everything) expect(output).not.toContain(FAKE_TOKEN);
+	});
+});
+
+describe('SpamGuard - messages posted during enforcement (AC-37)', () => {
+	it('deletesMessagesPostedWhileTheKickLogWasBeingPosted', async () => {
+		const send = deferred();
+		const { member, post, spam, logger, logChannel, textChannels, done } = setup({ logChannel: { send: () => send.promise } });
+		const spammer = member();
+		spam(spammer, 0, 'salut tovarăși');
+		await vi.waitFor(() => expect(logChannel.send).toHaveBeenCalledTimes(1));
+
+		const late = post(CH_D, 5_000, { member: spammer });
+		send.resolve({});
+		await done();
+
+		expect(textChannels[CH_D].bulkDelete).toHaveBeenCalledWith([late.id]);
+		expect(logged(logger.info)).toMatch(/1\/1 more posted during enforcement/);
+	});
+
+	it('deletesMessagesPostedDuringADeleteOnlyPass', async () => {
+		const secondDelete = deferred();
+		let deletesInA = 0;
+		const { member, post, spam, logger, textChannels, done } = setup({
+			bulkDelete: { [CH_A]: async () => (++deletesInA === 2 ? secondDelete.promise : {}) }
+		});
+		const spammer = member({ kick: async () => Promise.reject(discordApiError(RESTJSONErrorCodes.MissingPermissions, 'Missing Permissions')) });
+		spam(spammer);
+		await done();
+		spam(spammer, 120_000);
+		await vi.waitFor(() => expect(deletesInA).toBe(2));
+
+		const late = post(CH_D, 125_000, { member: spammer });
+		secondDelete.resolve({});
+		await vi.waitFor(() => expect(logged(logger.info)).toContain('failed-kick cooldown'));
+
+		expect(textChannels[CH_D].bulkDelete).toHaveBeenCalledWith([late.id]);
+	});
+});
+
+describe('SpamGuard - deadlines (AC-38)', () => {
+	it('treatsAKickThatTakesTooLongAsFailed', async () => {
+		const { member, spam, logChannel, textChannels, done } = setup({ callTimeoutMs: 20 });
+		const spammer = member({ kick: never });
+
+		spam(spammer);
+		await done();
+
+		expect(textChannels[CH_A].bulkDelete).toHaveBeenCalledTimes(1);
+		expect(kickLogs(logChannel)[0].description).toContain('⚠️ Nu l-am putut da afară: timed out after 20 ms');
+	});
+
+	it('treatsADeleteThatTakesTooLongAsNotDeleted', async () => {
+		const { spam, logger, logChannel, done } = setup({ callTimeoutMs: 20, bulkDelete: { [CH_B]: never } });
+
+		spam();
+		await done();
+
+		expect(logged(logger.error)).toMatch(new RegExp(`channel ${CH_B}.*timed out after 20 ms`));
+		expect(kickLogs(logChannel)[0].description).toContain('🧹 Mesaje șterse: 2 din 3.');
+	});
+
+	it('logsTheKickLogFactsWhenPostingItTakesTooLong', async () => {
+		const { spam, logger, done } = setup({ callTimeoutMs: 20, logChannel: { send: never } });
+
+		spam();
+		await done();
+
+		expect(logged(logger.error)).toMatch(/Could not post the kick log.*timed out after 20 ms[\s\S]*Kick log: member/);
+	});
+
+	it('stopsCallingDiscordOnceTheEnforcementDeadlineHasPassed', async () => {
+		const { spam, logger, logChannel, textChannels, done } = setup({
+			callTimeoutMs: 30,
+			enforcementDeadlineMs: 50,
+			bulkDelete: { [CH_A]: never, [CH_B]: never }
+		});
+
+		spam(undefined, 0, 'salut tovarăși');
+		await done();
+
+		// The enforcement gave up on A and B, never reached C, and logged the kick log instead of posting it.
+		expect(logChannel.send).not.toHaveBeenCalled();
+		expect(logged(logger.error)).toMatch(/deadline[\s\S]*Kick log: member/);
+		expect(logged(logger.info)).toMatch(/deleted 0\/3/);
+		// C, never tried, goes to a follow-up with a fresh deadline; A and B timed out, which counts as failed, so no retry.
+		await vi.waitFor(() => expect(textChannels[CH_C].bulkDelete).toHaveBeenCalledTimes(1));
+		expect(textChannels[CH_A].bulkDelete).toHaveBeenCalledTimes(1);
+		expect(textChannels[CH_B].bulkDelete).toHaveBeenCalledTimes(1);
+	});
+
+	it('schedulesAFollowUpForMessagesPostedAfterTheDeadline', async () => {
+		const { member, post, spam, logger, textChannels, done } = setup({
+			callTimeoutMs: 30,
+			enforcementDeadlineMs: 50,
+			bulkDelete: { [CH_A]: never, [CH_B]: never }
+		});
+		const spammer = member();
+		spam(spammer, 0, 'salut tovarăși');
+		await vi.waitFor(() => expect(textChannels[CH_A].bulkDelete).toHaveBeenCalledTimes(1));
+
+		const late = post(CH_D, 5_000, { member: spammer });
+		await done();
+
+		await vi.waitFor(() => expect(textChannels[CH_D].bulkDelete).toHaveBeenCalledWith([late.id]));
+		await vi.waitFor(() => expect(logged(logger.info)).toContain('Follow-up'));
+	});
+
+	it('logsTheLateResultOfACallThatTimedOut', async () => {
+		const { member, spam, logger, done } = setup({ callTimeoutMs: 20 });
+		const spammer = member({ kick: () => new Promise((resolve) => setTimeout(() => resolve({}), 60)) });
+
+		spam(spammer);
+		await done();
+
+		await vi.waitFor(() => expect(logged(logger.info)).toMatch(new RegExp(`Late result: kick of member ${FAKE_MEMBER_ID}.*succeeded`)));
 	});
 });
 
