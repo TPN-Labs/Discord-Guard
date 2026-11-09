@@ -187,7 +187,7 @@ These are known gaps between the current process and a fully realised AI-driven 
 
 **1. No Linear project.** Branches and PR titles use `ENG-00` and the PR-title check runs with an optional scope. Intent: create a Linear project for this repository, then flip `REQUIRE_SCOPE` to `'true'`.
 
-**2. `/limits` is a registered stub.** Its handlers throw `not implemented`. Under §4.V it should not be in the live command set; it predates this Constitution and is carried as a known deviation until the anti-spam feature lands or the command is unregistered.
+**2. `/limits` is a registered stub.** Its handlers throw `not implemented`. Under §4.V it should not be in the live command set; it predates this Constitution and is carried as a known deviation. Anti-spam has landed with its thresholds as code constants ([`docs/specs/2026-11-08-anti-spam/`](./docs/specs/2026-11-08-anti-spam/requirements.md)), so `/limits` now waits on persistent storage (item 3), or is unregistered.
 
 **3. No persistent storage.** Settings and anti-spam limits have nowhere durable to live yet. The storage choice is a Step 2 design decision for the first feature that needs it, recorded as an ADR under `docs/adr/`.
 

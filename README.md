@@ -53,16 +53,26 @@ The phrases and the reasoning behind them are in [`docs/specs/2026-11-07-join-le
 
 ### 🛡️ Anti-spam
 
-The bot watches messages and automatically **kicks** members who spam. It looks at:
+The bot watches every message and automatically **kicks** a member who breaks one of five rules:
 
--   many messages in a short window (message flood),
--   the same message repeated over and over,
--   a burst of mentions (`@user` or `@role`) in a short time,
--   invite links or links posted across several channels in a row.
+| Rule | Fires when a member posts… |
+| --- | --- |
+| Cross-channel | in **3 different channels** within 60 seconds (a thread counts as its own channel) |
+| Flood | **8 messages** within 10 seconds |
+| Repeat | the **same text 4 times** within 60 seconds (ignoring case and surrounding spaces) |
+| Mention burst | **6 mentions** within 30 seconds; an `@everyone` or `@here` attempt counts as 3 |
+| Link spread | a **link in 2 different channels** within 60 seconds; GIFs from Tenor or Giphy and links to Discord messages don't count |
 
-Each kick is logged in the moderation log channel with the reason and the offending messages, so moderators can review it. Moderators and members with configured roles are never checked.
+When a rule fires, the bot:
 
-The thresholds (how many messages, in how many seconds) are adjustable with the `/limits` command.
+1. sends the member a short DM saying why and that they can rejoin (it waits at most 3 seconds for it),
+2. kicks them, with the rule in the audit-log reason,
+3. deletes every message it saw from them in the **last 10 minutes**, in every channel, including anything they post while the bot is acting (a kick can't purge older history, and the bot keeps no storage),
+4. posts a red **kick log** in the announcements channel: who, which rules, the deleted messages and the outcome. Links in the kick log are censored to their bare domain name - `https://free-nitro.ru/claim` shows as `free-nitro` - so the log never reposts a working spam link, and nothing in it can ping anyone.
+
+Members with the **Manage Messages** permission and the users in `OWNERS` are never checked. If the kick is refused (the member's role is above the bot's), their messages are still deleted, and for the next 10 minutes any new spam from them is deleted without another DM or kick log.
+
+The thresholds are fixed in code (`src/lib/antispam/rules.ts`) and change through a pull request. `/limits` will make them adjustable once the bot has persistent storage. The rules and the reasoning behind them are in [`docs/specs/2026-11-08-anti-spam/`](docs/specs/2026-11-08-anti-spam/requirements.md).
 
 ### 🟢 Online and offline status messages
 
@@ -88,7 +98,7 @@ Slash commands for moderators and members. See [Commands](#commands).
 | `/ping`, `/eval`, `/reload`              | ✅ Done      |
 | Rules message with ✅ verification       | 🗓️ Planned   |
 | Join / leave announcements               | 🧪 Built, awaiting test-server acceptance |
-| Anti-spam with automatic kick            | 🗓️ Planned   |
+| Anti-spam with automatic kick            | 🧪 Built, awaiting test-server acceptance |
 | `/limits` (anti-spam thresholds)         | 🚧 Stub only |
 | Online / offline status messages         | 🧪 Built, awaiting test-server acceptance |
 | Persistent storage for settings          | 🗓️ Planned   |
@@ -125,7 +135,7 @@ Slash commands for moderators and members. See [Commands](#commands).
     | Kick Members         | Kick spammers                                   |
 
 5. Open the generated URL and add the bot to the server.
-6. In **Server Settings → Roles**, drag the bot's role **above** the verified member role. Discord does not let a bot assign roles that sit higher than its own.
+6. In **Server Settings → Roles**, drag the bot's role **above** the verified member role and above every role whose members anti-spam should be able to kick. Discord does not let a bot assign roles, or kick members, at or above its own highest role.
 
 ---
 
@@ -204,12 +214,12 @@ Settings live in `src/.env`. The file is ignored by git: never commit it.
 | `OWNERS`        | Yes      | Discord user IDs allowed to run owner-only commands, **separated by single spaces, not commas**. Example: `OWNERS=123456789012345678 234567890123456789` |
 | `NODE_ENV`      | No       | `development` (default) or `production`. Changes the startup banner.                                                                                     |
 | `STATUS_CHANNEL_ID` | No   | Channel ID for the online/offline status messages: a text or announcement channel. Empty turns them off (a warning is logged). A value that isn't a Discord ID (17-20 digits) stops start-up. |
-| `ANNOUNCEMENTS_CHANNEL_ID` | No | Channel ID for the join and leave announcements: a text or announcement channel. Empty turns them off (a warning is logged). A value that isn't a Discord ID stops start-up. |
+| `ANNOUNCEMENTS_CHANNEL_ID` | No | Channel ID for the join and leave announcements and the anti-spam kick logs: a text or announcement channel. Empty turns announcements off (a warning is logged); anti-spam still runs and writes its kick logs to the bot's log. A value that isn't a Discord ID stops start-up. |
 | `RULES_CHANNEL_ID` | No | The server's rules channel. When set, join announcements end with a link to it. Empty leaves the link out. A value that isn't a Discord ID stops start-up. |
 
 To copy a user or channel ID, turn on **Developer Mode** in Discord (**User Settings → Advanced**), then right-click the user or channel and choose **Copy User ID** / **Copy Channel ID**.
 
-Channel IDs, role IDs and anti-spam thresholds for the planned features will be added to this table as each feature lands.
+Channel and role IDs for the planned features will be added to this table as each feature lands. Anti-spam needs no variable of its own.
 
 ---
 
@@ -240,13 +250,14 @@ src/
 │   ├── constants.ts
 │   ├── env-parser.ts      # Reads OWNERS and the optional channel IDs
 │   ├── announcements/     # Join and leave announcements: copy, wording, decisions
+│   ├── antispam/          # Anti-spam: rules, link censoring, bounded message tracking, kick log, SpamGuard
 │   ├── status/            # Online/offline status messages: copy, decisions, shutdown hooks
 │   └── utils.ts
 ├── commands/
 │   ├── General/           # Commands for everyone (ping)
 │   ├── Development/       # Owner tools (eval, reload)
 │   └── Guardian/          # Moderation and anti-spam (limits)
-├── listeners/             # Gateway event handlers (ready, statusOnline, member join/leave, command errors, ...)
+├── listeners/             # Gateway event handlers (ready, statusOnline, member join/leave, anti-spam, command errors, ...)
 └── preconditions/         # Command checks (OwnerOnly)
 tests/                     # Vitest tests, mirroring src/ (e.g. tests/lib/env-parser.test.ts)
 ```
@@ -255,8 +266,8 @@ Sapphire loads every file in these folders automatically. To add a command or li
 
 New features are expected to land as:
 
--   `listeners/` handlers for `messageReactionAdd` / `messageReactionRemove` (verification) and `messageCreate` (anti-spam),
--   commands under `commands/Guardian/` for moderator controls.
+-   `listeners/` handlers for `messageReactionAdd` / `messageReactionRemove` (verification),
+-   commands under `commands/Guardian/` for moderator controls (`/limits`, once storage exists).
 
 ---
 

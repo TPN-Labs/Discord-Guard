@@ -1,6 +1,6 @@
 # Discord Guard conventions
 
-Last reviewed: 2026-11-06. Internal reference for engineering and AI agents.
+Last reviewed: 2026-11-08. Internal reference for engineering and AI agents.
 
 This document defines how changes are made to this repository and summarizes the binding engineering rules. [The Constitution](../CONSTITUTION.md) remains authoritative; where the two disagree, the Constitution wins and this document is the defect.
 
@@ -54,11 +54,13 @@ The complete exception list is: a different toolchain or runtime; a different tr
 | Rules channel / rules message | The channel a new member sees first (set by `RULES_CHANNEL_ID`), and the single bot-posted message in it that carries the ✅ reaction. |
 | Announcements channel | Where join and leave announcements are posted; set by `ANNOUNCEMENTS_CHANNEL_ID`. |
 | Join announcement / leave announcement | The green embed (pinging the new member) and the grey embed the bot posts in the announcements channel when a member joins or leaves. |
-| Moderation log channel | Where the bot records every automatic action (kicks) with its reason and evidence. |
+| Moderation log channel | Where the bot records every automatic action (kicks) with its reason and evidence. For now this is the announcements channel. |
+| Kick log | The red embed the bot posts in the moderation log channel when anti-spam kicks a member: who, which rules, the deleted messages with links censored to their domain name, and the outcome. |
+| Rule | One anti-spam check (cross-channel, flood, repeat, mention burst, link spread); it **fires** when a member's recent messages reach its threshold. |
 | Status channel / status message | The channel set by `STATUS_CHANNEL_ID`, and the green online or red offline embed the bot posts there when it starts or stops. |
-| Moderator | A member with a configured moderator role. Never checked by anti-spam. |
+| Moderator | A member with the **Manage Messages** permission in the server (Administrator includes it). Never checked by anti-spam. |
 | Owner | A user whose ID is in `OWNERS`. Can run owner-only commands, including `/eval`. |
-| Limit | An anti-spam rule: how many times an action may happen in an interval before the member is kicked. |
+| Limit | A rule's threshold: how many times an action may happen in an interval before the member is kicked. Code constants today; `/limits` will edit them once storage exists. |
 | Piece | Sapphire's word for a command, listener, precondition or argument loaded from its folder. |
 
 Use these words in requirements, tests, code and user-facing text. "User" alone is ambiguous: say member, moderator or owner.

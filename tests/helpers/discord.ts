@@ -126,3 +126,75 @@ export function fakeMember(
 		displayAvatarURL: () => 'https://cdn.discordapp.com/embed/avatars/0.png'
 	};
 }
+
+export const FAKE_OWNER_ID = '678901234567890123';
+
+/** A text channel or thread that messages can be bulk-deleted from. */
+export function fakeTextChannel(id: string, bulkDelete: (ids: string[]) => Promise<unknown> = async () => ({})) {
+	return { id, bulkDelete: vi.fn(bulkDelete) };
+}
+
+/** A client whose channel cache answers from `channels` by ID; unknown IDs resolve to null. */
+export function fakeGuardClient(channels: Record<string, unknown>) {
+	return {
+		user: { id: FAKE_BOT_ID },
+		channels: { fetch: vi.fn(async (id: string) => channels[id] ?? null) }
+	};
+}
+
+export interface FakeGuardMemberOptions {
+	id?: string;
+	manageMessages?: boolean;
+	kick?: (reason?: string) => Promise<unknown>;
+	send?: (options: unknown) => Promise<unknown>;
+}
+
+/** The parts of a GuildMember the anti-spam guard reads and acts on. */
+export function fakeGuardMember({
+	id = FAKE_MEMBER_ID,
+	manageMessages = false,
+	kick = async () => ({}),
+	send = async () => ({})
+}: FakeGuardMemberOptions = {}) {
+	return {
+		id,
+		displayName: 'Ion',
+		permissions: new PermissionsBitField(manageMessages ? [PermissionsBitField.Flags.ManageMessages] : []),
+		kick: vi.fn(kick),
+		send: vi.fn(send)
+	};
+}
+
+export interface FakeGuardMessageOptions {
+	id?: string;
+	channelId: string;
+	createdTimestamp: number;
+	content?: string;
+	authorId?: string;
+	guildId?: string | null;
+	system?: boolean;
+	webhookId?: string | null;
+	member?: ReturnType<typeof fakeGuardMember> | null;
+}
+
+let fakeMessageId = 900000000000000000n;
+
+/** The parts of a guild Message the anti-spam guard reads. */
+export function fakeGuardMessage(client: ReturnType<typeof fakeGuardClient>, options: FakeGuardMessageOptions) {
+	const { channelId, createdTimestamp, content = 'salut', guildId = FAKE_GUILD_ID, system = false, webhookId = null } = options;
+	const member = options.member === undefined ? fakeGuardMember() : options.member;
+	const authorId = options.authorId ?? member?.id ?? FAKE_MEMBER_ID;
+	return {
+		id: options.id ?? String(fakeMessageId++),
+		channelId,
+		guildId,
+		createdTimestamp,
+		content,
+		system,
+		webhookId,
+		author: { id: authorId, username: 'ion1930' },
+		member,
+		guild: guildId === null ? null : { id: guildId, name: 'Serverul de test' },
+		client
+	};
+}
