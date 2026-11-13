@@ -1328,10 +1328,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"discord-api-types@npm:^0.38.1, discord-api-types@npm:^0.38.30, discord-api-types@npm:^0.38.33, discord-api-types@npm:^0.38.49, discord-api-types@npm:^0.38.50, discord-api-types@npm:^0.38.57":
+"discord-api-types@npm:^0.38.1, discord-api-types@npm:^0.38.30, discord-api-types@npm:^0.38.33, discord-api-types@npm:^0.38.49, discord-api-types@npm:^0.38.50":
   version: 0.38.57
   resolution: "discord-api-types@npm:0.38.57"
   checksum: 10c0/84970528136bc6950a000fb4b382cc6e8bab435f28e752db358b16ca2593c34869b749eb17a3206c47b5ca98f1c616eeb32c984701ff4b5edc51c0f2e2ce32d4
+  languageName: node
+  linkType: hard
+
+"discord-api-types@npm:^0.38.58":
+  version: 0.38.58
+  resolution: "discord-api-types@npm:0.38.58"
+  checksum: 10c0/5d604ff13a4654a2d55739b637a60ea285f0ffcc2fa3efad4f6c22af6a78c89b5894ec9cd85169fa7a251a9e451306364adf5b95cbf781c93a495ae21e1a6e5b
   languageName: node
   linkType: hard
 
@@ -1360,7 +1367,7 @@ __metadata:
     "@types/node": "npm:^26.6.6"
     "@types/ws": "npm:^8.5.3"
     colorette: "npm:^2.0.19"
-    discord-api-types: "npm:^0.38.57"
+    discord-api-types: "npm:^0.38.58"
     discord.js: "npm:^14.27.0"
     dotenv: "npm:^18.0.9"
     dotenv-expand: "npm:^1000.0.0"
