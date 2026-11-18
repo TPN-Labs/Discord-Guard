@@ -40,7 +40,7 @@ The complete exception list is: a different toolchain or runtime; a different tr
 
 **Security of workflows.** `semantic_pr.yml` runs on `pull_request_target` and therefore with the base branch's permissions: it must never check out or execute PR code, and untrusted values (the PR title) are passed through `env:`, never interpolated into a script. Any new workflow step that comments on PRs skips fork PRs, which get a read-only token.
 
-**Required checks.** The ruleset requires `ci / Quality: ESLint`, `ci / Quality: TypeScript`, `ci / Build & Verify` and `title / Validate PR title`. Renaming a job or changing its `name:` breaks the ruleset for every PR until it is repointed; do it only together with the ruleset change.
+**Required checks.** The ruleset requires `CI Gate / Result` and `title / Validate PR title`, the same checks as every other TPN LABS repository. `CI Gate / Result` is the `gate` job in `ci.yml`: it runs after every other CI job and fails if any of them failed or was cancelled, so a red `ci / ...` job still blocks merge. Renaming either required job or changing its `name:` breaks the ruleset for every PR until it is repointed; do it only together with the ruleset change.
 
 **Dependencies.** Dependabot updates weekly with a 5-day cooldown. Keep `@sapphire/*` and discord.js packages in their groups; they move in lockstep. A dependency added by hand respects the same cooldown: pick a release at least five days old.
 

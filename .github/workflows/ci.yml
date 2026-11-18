@@ -12,10 +12,10 @@ name: 'CI'
 # open a pull request against a public repository, and fork PRs must not execute on
 # our own machines.
 #
-# Job names keep the "ci / ..." prefix the reusable workflow produced, so the
-# required status checks in the branch ruleset still match:
-#   "ci / Quality: ESLint", "ci / Quality: TypeScript", "ci / Build & Verify".
-# "ci / Quality: Prettier" also runs but is not (yet) a required check.
+# The ruleset requires one CI check, "CI Gate / Result" (the `gate` job below),
+# the same check every TPN Labs repository reports. It fails if any other job
+# here failed or was cancelled. The other jobs keep the "ci / ..." names the
+# reusable workflow produced.
 
 # Pull requests only: CI gates changes before they merge, so it does not re-run on
 # pushes to main.
@@ -196,3 +196,58 @@ jobs:
             } else {
               await github.rest.issues.createComment({ owner, repo, issue_number, body });
             }
+
+  # Publishes the one verdict the ruleset requires. Port of reusable-ci-gate.yml
+  # in TPN-Labs/GitHub-Actions (a public repository cannot call it). Approved as
+  # a new job under Constitution §4.VII: it is the "one job collects individual
+  # check outcomes and publishes a final verdict" form, and it has to run after
+  # the other jobs (`needs:` + `if: always()`), so it can't be a step in one.
+  gate:
+    name: 'CI Gate / Result'
+    if: always()
+    needs: [quality, build-and-verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Check upstream job results
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        # The needs JSON is read from an env var, never interpolated into the
+        # script, so job names or outputs can't inject code.
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'JS'
+          const fs = require('fs');
+
+          const needs = JSON.parse(process.env.NEEDS_JSON || '{}');
+          const jobs = Object.entries(needs);
+          if (jobs.length === 0) {
+            console.log("::error::No upstream jobs. The gate job must list them in 'needs:'.");
+            process.exit(1);
+          }
+
+          const passing = new Set(['success', 'skipped']);
+          const icon = { success: '✅', skipped: '⏭️', failure: '❌', cancelled: '🚫' };
+          const failed = jobs.filter(([, job]) => !passing.has(job.result));
+
+          const rows = jobs.map(([name, job]) => `| \`${name}\` | ${icon[job.result] || '❓'} ${job.result} |`);
+          const summary = [
+            `## ${failed.length ? '❌ CI Gate failed' : '✅ CI Gate passed'}`,
+            '',
+            '| Job | Result |',
+            '|-----|--------|',
+            ...rows,
+            '',
+          ].join('\n');
+          if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
+
+          for (const [name, job] of jobs) console.log(`${name}: ${job.result}`);
+
+          if (failed.length) {
+            for (const [name, job] of failed) console.log(`::error::Upstream job '${name}' ended with '${job.result}'.`);
+            process.exit(1);
+          }
+          console.log('All upstream jobs succeeded or were skipped.');
+          JS

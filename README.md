@@ -297,6 +297,7 @@ Every pull request to `main` runs these checks on GitHub-hosted runners, defined
 | `ci / Quality: TypeScript`  | `yarn check-types`                                                                                                            |
 | `ci / Quality: Prettier`    | `yarn format:check` (not a required check yet)                                                                                |
 | `ci / Build & Verify`       | `yarn test`, then `yarn build`, then checks that `dist/` was produced                                                         |
+| `CI Gate / Result`          | Fails if any job above failed or was cancelled. Required, with the PR title check                                             |
 | `title / Validate PR title` | Title must be `<type>: <summary>` or `<type>(<scope>): <summary>`; `<type>` is `fix`, `feat`, `ci`, `docs`, `chore` or `test` |
 
 Dependabot (`.github/dependabot.yml`) opens weekly pull requests for dependency updates through Yarn.
