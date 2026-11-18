@@ -87,7 +87,7 @@ Per [`CONSTITUTION.md §4.VI`](./CONSTITUTION.md#vi-session-isolation--work-dura
 
 **Do not add a CI job.** Per [`CONSTITUTION.md §4.VII`](./CONSTITUTION.md#vii-ci-job-economy---mandatory), a new `jobs:` entry or matrix leg needs an explicit human yes and one of the narrow exemptions in `docs/CONVENTIONS.md` §1. Put the check in the Vitest suite if it can run in-process, otherwise add a **step** to an existing job - `yarn test` itself is a step in `ci / Build & Verify`.
 
-**This repository is the exception to the Hetzner rule.** It is public, so its jobs run on GitHub-hosted runners (`runs-on: ubuntu-latest`) and must never move to `[self-hosted, hetzner]`: fork PRs would execute on TPN LABS machines. Workflows are self-contained; do not point them at the private `TPN-Labs/GitHub-Actions` reusable workflows, which a public repository cannot call. Do not rename a job: `ci / Quality: ESLint`, `ci / Quality: TypeScript`, `ci / Build & Verify` and `title / Validate PR title` are required checks.
+**This repository is the exception to the Hetzner rule.** It is public, so its jobs run on GitHub-hosted runners (`runs-on: ubuntu-latest`) and must never move to `[self-hosted, hetzner]`: fork PRs would execute on TPN LABS machines. Workflows are self-contained; do not point them at the private `TPN-Labs/GitHub-Actions` reusable workflows, which a public repository cannot call. Do not rename the `CI Gate / Result` or `title / Validate PR title` jobs: they are the required checks. `CI Gate / Result` fails when any other CI job fails.
 
 ## Discord safety
 

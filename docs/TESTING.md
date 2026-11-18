@@ -117,5 +117,5 @@ a scenario for. For this bot, a spec set is incomplete without, where the surfac
 ## 8. CI
 
 `yarn test` runs as a step in the `ci / Build & Verify` job (`.github/workflows/ci.yml`). A red test
-fails that required check and blocks merge. Add new tests to the suite; do not add a job or a matrix
+fails that job, which fails the required `CI Gate / Result` check and blocks merge. Add new tests to the suite; do not add a job or a matrix
 leg for them (Constitution §4.VII).
