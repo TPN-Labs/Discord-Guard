@@ -1437,7 +1437,7 @@ __metadata:
     npm-run-all: "npm:^4.1.5"
     prettier: "npm:^3.9.10"
     reflect-metadata: "npm:^0.2.2"
-    tldts: "npm:^7.4.19"
+    tldts: "npm:^7.5.5"
     tsc-watch: "npm:^7.2.1"
     tslib: "npm:^2"
     typescript: "npm:^5"
@@ -3856,7 +3856,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tldts@npm:^7.0.9, tldts@npm:^7.4.19":
+"tldts-core@npm:^7.5.5":
+  version: 7.6.2
+  resolution: "tldts-core@npm:7.6.2"
+  checksum: 10c0/58df87a551028a80f72322b1f1a1c35cf64ce10923fa291c6d241779e24790c580dd4e0712525ecfdbc232a544e393ea6fa29f2bddc9c6b461c91613a7824c31
+  languageName: node
+  linkType: hard
+
+"tldts@npm:^7.0.9":
   version: 7.4.19
   resolution: "tldts@npm:7.4.19"
   dependencies:
@@ -3864,6 +3871,17 @@ __metadata:
   bin:
     tldts: bin/cli.js
   checksum: 10c0/86a35f5508cd8a1d4e6516d54f0aa375efa643efd4a5d61c84f844f26c07fdea9a29320c341398127fa0d67877697820177f5362108cbcbf6ea06c1ed0795854
+  languageName: node
+  linkType: hard
+
+"tldts@npm:^7.5.5":
+  version: 7.5.5
+  resolution: "tldts@npm:7.5.5"
+  dependencies:
+    tldts-core: "npm:^7.5.5"
+  bin:
+    tldts: bin/cli.js
+  checksum: 10c0/24877542443721af6722af1cccab7ddfeb5199d3fc65ee22d23fd6e6d5ed746de2754eafb3005c71bab2579ba58b2628ee64b799d2a5a31f5cdce050e79f6f08
   languageName: node
   linkType: hard
 
